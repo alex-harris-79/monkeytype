@@ -9,6 +9,8 @@ import Config from "../config";
 import Page from "../pages/page";
 import * as ResultsShownEvent from "../observables/results-shown-event";
 import UpdateData = MonkeyTypes.ResultsData;
+import TbdModeData = MonkeyTypes.TbdModeData;
+import TbdWordData = MonkeyTypes.TbdWordData;
 
 let threshold = 10;
 let originalWordset = new Wordset([]);
@@ -134,23 +136,43 @@ function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
   }
 }
 
-function getSpeeds(): { [word: string]: Array<number> } {
-  const storedSpeeds = localStorage.getItem("tbdModeSpeeds");
-  return storedSpeeds ? JSON.parse(storedSpeeds) : {};
+function getSavedData(): TbdModeData {
+  const data = localStorage.getItem("tbdModeData");
+  return data
+    ? JSON.parse(data)
+    : {
+        words: {},
+      };
 }
 
-function saveSpeeds(speeds: { [word: string]: Array<number> }): void {
-  localStorage.setItem("tbdModeSpeeds", JSON.stringify(speeds));
+function getDataForWord(word: string): TbdWordData {
+  const data = getSavedData();
+  if (!data.words[word]) {
+    data.words[word] = { speeds: [] };
+    updateSavedData(data);
+  }
+  return data.words[word];
+}
+
+function getSpeedsForWord(word: string): Array<number> {
+  return getDataForWord(word).speeds;
+}
+
+function updateSavedData(data: object): void {
+  localStorage.setItem("tbdModeData", JSON.stringify(data));
+}
+
+function saveWordData(word: string, wordData: TbdWordData): void {
+  const data = getSavedData();
+  data.words[word] = wordData;
+  updateSavedData(data);
 }
 
 export function addBurst(word: string, speed: number): void {
   console.log("addBurst");
-  const speeds = getSpeeds();
-  if (!Array.isArray(speeds[word])) {
-    speeds[word] = [];
-  }
-  speeds[word].push(speed);
-  saveSpeeds(speeds);
+  const wordData = getDataForWord(word);
+  wordData.speeds.push(speed);
+  saveWordData(word, wordData);
 }
 
 export function getNextWordset(): Wordset {
@@ -264,11 +286,6 @@ function getWordElement(word: string): JQuery<HTMLElement> {
     return $(`<span class="tbdWord" data-word="${word}">${word}</span>`);
   }
   return element;
-}
-
-function getSpeedsForWord(word: string): Array<number> {
-  const speeds = getSpeeds();
-  return Array.isArray(speeds[word]) ? speeds[word] : [];
 }
 
 export function resetThreshold(): void {

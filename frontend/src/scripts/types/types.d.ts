@@ -695,4 +695,12 @@ declare namespace MonkeyTypes {
     randomQuote: MonkeyTypes.Quote;
     dontSave: boolean;
   }
+
+  interface TbdWordData {
+    speeds: Array<number>;
+  }
+
+  interface TbdModeData {
+    words: { [word: string]: TbdWordData };
+  }
 }
