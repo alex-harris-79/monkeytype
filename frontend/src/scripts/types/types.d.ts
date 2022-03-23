@@ -684,4 +684,15 @@ declare namespace MonkeyTypes {
       };
     };
   }
+
+  interface ResultsData {
+    res: MonkeyTypes.Result<MonkeyTypes.Mode>;
+    difficultyFailed: boolean;
+    failReason: string;
+    afkDetected: boolean;
+    isRepeated: boolean;
+    tooShort: boolean;
+    randomQuote: MonkeyTypes.Quote;
+    dontSave: boolean;
+  }
 }

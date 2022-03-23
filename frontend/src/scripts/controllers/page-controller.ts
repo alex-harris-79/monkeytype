@@ -5,6 +5,7 @@ import * as Account from "../pages/account";
 import * as ManualRestart from "../test/manual-restart-tracker";
 import * as PageTest from "../pages/test";
 import * as PageAbout from "../pages/about";
+import * as PageChangeEvent from "../observables/page-change-event";
 import * as PageLogin from "../pages/login";
 import * as PageLoading from "../pages/loading";
 import * as PageTransition from "../states/page-transition";
@@ -72,6 +73,7 @@ export function change(page?: MonkeyTypes.Page | ""): void {
       await nextPage?.beforeShow();
     }
   );
+  PageChangeEvent.dispatch(previousPage, nextPage);
 }
 
 $(document).on("click", "#top .logo", () => {

@@ -1,0 +1,50 @@
+#tbdmodeInfo {
+  & > * {
+    margin-top: 1.5rem;
+  }
+  #tbdModeProgress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .progressMeterContainer {
+      flex-grow: 100;
+      background-color: var(--sub-color);
+    }
+
+    .threshold {
+      flex-grow: 1;
+      text-align: center;
+      color: var(--main-color);
+    }
+
+    .progressMeter {
+      height: 1rem;
+      width: 0;
+      background-color: var(--main-color);
+      transition: width 1s ease-in-out;
+    }
+  }
+
+  .wordsContainer {
+    .words {
+      display: flex;
+      flex-wrap: wrap;
+
+      .tbdWord {
+        margin: 0 8px;
+        transition: color 2s ease-out;
+
+        &[data-beaten="1"] {
+          color: var(--main-color);
+          font-weight: bold;
+        }
+      }
+    }
+  }
+
+  #tbdModeStats {
+    display: flex;
+    justify-content: space-evenly;
+  }
+}

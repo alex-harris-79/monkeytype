@@ -12,6 +12,7 @@ import * as QuoteRatePopup from "../popups/quote-rate-popup";
 import * as GlarsesMode from "../states/glarses-mode";
 import * as TestInput from "./test-input";
 import * as Notifications from "../elements/notifications";
+import * as ResultsShownEvent from "../observables/results-shown-event";
 import { Chart } from "chart.js";
 import { Auth } from "../firebase";
 
@@ -711,4 +712,15 @@ export async function update(
       Keymap.hide();
     }
   );
+
+  ResultsShownEvent.dispatch({
+    res,
+    difficultyFailed,
+    failReason,
+    afkDetected,
+    isRepeated,
+    tooShort,
+    randomQuote,
+    dontSave,
+  });
 }

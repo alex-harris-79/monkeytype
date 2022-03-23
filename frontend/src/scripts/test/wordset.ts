@@ -1,4 +1,5 @@
 import { randomElementFromArray, randomIntFromRange } from "../utils/misc";
+import * as WordsetRetrievedEvent from "../observables/wordset-retrieved-event";
 
 let currentWordset: Wordset | null = null;
 let currentWordGenerator: WordGenerator | null = null;
@@ -104,6 +105,7 @@ export function withWords(words: string[], funbox: string): Wordset {
     if (currentWordset == null || words !== currentWordset.words) {
       currentWordset = new Wordset(words);
     }
+    WordsetRetrievedEvent.dispatch(currentWordset);
     return currentWordset;
   }
 }

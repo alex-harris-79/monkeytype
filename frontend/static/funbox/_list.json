@@ -138,6 +138,12 @@
     "info": "Focus on slow and mistyped letters."
   },
   {
+    "name": "tbdmode",
+    "type": "script",
+    "affectsWordGeneration": true,
+    "info": "Name TBD"
+  },
+  {
     "name": "pseudolang",
     "type": "script",
     "affectsWordGeneration": true,

@@ -1,0 +1,278 @@
+import { Wordset } from "./wordset";
+import * as TestInput from "./test-input";
+import * as PageChangeEvent from "../observables/page-change-event";
+import * as WordsetRetrievedEvent from "../observables/wordset-retrieved-event";
+import * as ConfigEvent from "../observables/config-event";
+import * as TestStartedEvent from "../observables/test-started-event";
+import { median } from "../utils/misc";
+import Config from "../config";
+import Page from "../pages/page";
+import * as ResultsShownEvent from "../observables/results-shown-event";
+import UpdateData = MonkeyTypes.ResultsData;
+
+let threshold = 10;
+let originalWordset = new Wordset([]);
+let modifiedWordset = new Wordset([]);
+let initialized = false;
+
+const thresholdStepSize = 5;
+const $tbdModeInfo: JQuery<HTMLElement> = $("#tbdmodeInfo");
+const $progressMeter: JQuery<HTMLElement> = $("#tbdmodeInfo .progressMeter");
+const $currentThreshold: JQuery<HTMLElement> = $(
+  "#tbdmodeInfo .currentThreshold"
+);
+const $wordsRemaining: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsRemaining");
+const $wordsDiv: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsContainer .words");
+
+function handleResultsShownEvent(results: UpdateData): void {
+  toggleUI();
+  if (!isTbdMode()) {
+    return;
+  }
+  if (!results.difficultyFailed) {
+    saveBurstsFromLatestResults();
+    updateModifiedWordset(getNextWordset());
+  }
+  updateInfo();
+}
+
+function handleTestStartedEvent(): void {
+  toggleUI();
+}
+
+function init(): void {
+  if (initialized) {
+    return;
+  }
+  ConfigEvent.subscribe(funboxChangeHandler);
+  PageChangeEvent.subscribe(pageChangeHandler);
+  WordsetRetrievedEvent.subscribe(handleWordsetUpdate);
+  ResultsShownEvent.subscribe(handleResultsShownEvent);
+  TestStartedEvent.subscribe(handleTestStartedEvent);
+  updateInfo();
+  initialized = true;
+}
+
+export function getWord(): string {
+  return getModifiedWordset().randomWord();
+}
+
+function handleWordsetUpdate(wordset: Wordset): void {
+  if (wordset.words.join("$") !== originalWordset.words.join("$")) {
+    handleWordsetChanged(wordset);
+  }
+}
+
+function handleWordsetChanged(newWordset: Wordset): void {
+  updateCurrentWordset(newWordset);
+  updateModifiedWordset(getNextWordset());
+  resetThreshold();
+  getNextWordset();
+  updateInfo();
+}
+
+function updateCurrentWordset(wordset: Wordset): void {
+  console.log("updateCurrentWordset");
+  originalWordset = wordset;
+}
+
+function getCurrentWordset(): Wordset {
+  return originalWordset;
+}
+
+function updateModifiedWordset(wordset: Wordset): void {
+  console.log("updateCurrentWordset");
+  modifiedWordset = wordset;
+}
+
+function getModifiedWordset(): Wordset {
+  return modifiedWordset;
+}
+
+function getUnbeatenWordset(): Wordset {
+  let unbeatenWordset = new Wordset([]);
+  const currentWordset = getCurrentWordset();
+  if (currentWordset) {
+    const unbeatenWords = currentWordset.words.filter((word) => {
+      return !hasWordBeenBeaten(word);
+    });
+    unbeatenWordset = new Wordset(unbeatenWords);
+  }
+  return unbeatenWordset;
+}
+
+function getBeatenWordset(): Wordset {
+  const current = getCurrentWordset();
+  const unbeaten = getUnbeatenWordset();
+  const beaten = current.words.filter((word) => !unbeaten.words.includes(word));
+  return new Wordset(beaten);
+}
+
+function funboxChangeHandler(
+  key: string,
+  funbox?: MonkeyTypes.ConfigValues
+): void {
+  if (key != "funbox") {
+    return;
+  }
+  if (funbox == "tbdmode") {
+    $tbdModeInfo.removeClass("hidden");
+  } else {
+    $tbdModeInfo.addClass("hidden");
+  }
+}
+
+function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
+  if (Config.funbox !== "tbdmode") {
+    return;
+  }
+  const pagesToShowInfo = ["test"];
+  if (!pagesToShowInfo.includes(nextPage.name)) {
+    $tbdModeInfo.addClass("hidden");
+  } else {
+    $tbdModeInfo.removeClass("hidden");
+  }
+}
+
+function getSpeeds(): { [word: string]: Array<number> } {
+  const storedSpeeds = localStorage.getItem("tbdModeSpeeds");
+  return storedSpeeds ? JSON.parse(storedSpeeds) : {};
+}
+
+function saveSpeeds(speeds: { [word: string]: Array<number> }): void {
+  localStorage.setItem("tbdModeSpeeds", JSON.stringify(speeds));
+}
+
+export function addBurst(word: string, speed: number): void {
+  console.log("addBurst");
+  const speeds = getSpeeds();
+  if (!Array.isArray(speeds[word])) {
+    speeds[word] = [];
+  }
+  speeds[word].push(speed);
+  saveSpeeds(speeds);
+}
+
+export function getNextWordset(): Wordset {
+  console.log("getNextWordset");
+  const unbeatenWordset = getUnbeatenWordset();
+
+  if (
+    unbeatenWordset.length == 0 ||
+    (unbeatenWordset.length == 1 && unbeatenWordset.randomWord() == "I")
+  ) {
+    // there seems to be an issue where sometimes "I" is never chosen as a word in custom with
+    // random enabled
+    bumpThreshold();
+    return getNextWordset();
+  }
+
+  const originalWordset = getCurrentWordset();
+  // Add some random words if the unbeaten wordset is too small
+  const originalUniqueWordset = new Wordset([
+    ...new Set(originalWordset.words),
+  ]);
+  const minWordsPerLevel = Math.min(5, originalUniqueWordset.length);
+  if (unbeatenWordset.length >= minWordsPerLevel) {
+    return unbeatenWordset;
+  } else {
+    const newWords: string[] = Array.from(unbeatenWordset.words);
+    do {
+      const newWord = originalUniqueWordset.randomWord();
+      if (!newWords.includes(newWord)) {
+        newWords.push(newWord);
+      }
+    } while (newWords.length < minWordsPerLevel);
+    return new Wordset(newWords);
+  }
+}
+
+function hasWordBeenBeaten(word: string): boolean {
+  const speeds = getSpeedsForWord(word);
+  if (speeds.length == 0) {
+    return false;
+  }
+  return median(speeds) > threshold;
+}
+
+function bumpThreshold(): void {
+  threshold += thresholdStepSize;
+}
+
+function isTbdMode(): boolean {
+  return Config.funbox == "tbdmode";
+}
+
+function toggleUI(): void {
+  if (isTbdMode()) {
+    $tbdModeInfo.removeClass("hidden");
+  } else {
+    $tbdModeInfo.addClass("hidden");
+  }
+}
+
+function saveBurstsFromLatestResults(): void {
+  const resultWords = TestInput.input.history;
+  const resultBursts = TestInput.burstHistory;
+
+  for (let i = 0; i < resultWords.length; i++) {
+    const word = resultWords[i];
+    const burst = resultBursts[i];
+    addBurst(word, burst);
+  }
+}
+
+function updateProgressMeter(beatenWords: string[]): void {
+  const percentComplete = Math.round(
+    (beatenWords.length / getCurrentWordset().length) * 100
+  );
+  $progressMeter.css("width", `${percentComplete}%`);
+}
+
+export function updateInfo(): void {
+  const unbeatenWordset = getUnbeatenWordset();
+  const beaten = getBeatenWordset();
+  updateUiWords();
+  updateProgressMeter(beaten.words);
+  $currentThreshold.text(threshold);
+  $wordsRemaining.text(unbeatenWordset.length);
+}
+
+function updateUiWords(): void {
+  const currentWordset = getCurrentWordset();
+  [...document.querySelectorAll(".tbdWord")].forEach((wordElement) => {
+    // @ts-ignore
+    const word = wordElement.dataset.word;
+    if (!currentWordset.words.includes(word)) {
+      // @ts-ignore
+      wordElement.parentElement.removeChild(wordElement);
+    }
+  });
+  currentWordset.words.sort().forEach((word) => {
+    const wordElement = getWordElement(word);
+    $wordsDiv.append(wordElement);
+    setTimeout(() => {
+      wordElement.attr("data-beaten", hasWordBeenBeaten(word) ? "1" : "0");
+      wordElement.attr("data-count", getSpeedsForWord(word).length);
+    }, 0);
+  });
+}
+
+function getWordElement(word: string): JQuery<HTMLElement> {
+  const element = $(`.tbdWord[data-word="${word}"]`);
+  if (element.length == 0) {
+    return $(`<span class="tbdWord" data-word="${word}">${word}</span>`);
+  }
+  return element;
+}
+
+function getSpeedsForWord(word: string): Array<number> {
+  const speeds = getSpeeds();
+  return Array.isArray(speeds[word]) ? speeds[word] : [];
+}
+
+export function resetThreshold(): void {
+  threshold = 10;
+}
+
+init();
