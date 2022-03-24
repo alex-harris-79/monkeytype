@@ -11,10 +11,12 @@ import * as ResultsShownEvent from "../observables/results-shown-event";
 import UpdateData = MonkeyTypes.ResultsData;
 import TbdModeData = MonkeyTypes.TbdModeData;
 import TbdWordData = MonkeyTypes.TbdWordData;
+import { debounce } from "../utils/debounce";
 
 let threshold = 10;
 let originalWordset = new Wordset([]);
 let modifiedWordset = new Wordset([]);
+let savedData: TbdModeData;
 let initialized = false;
 
 const thresholdStepSize = 5;
@@ -147,8 +149,21 @@ function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
 }
 
 function getSavedData(): TbdModeData {
-  const data = localStorage.getItem("tbdModeData");
-  return data ? JSON.parse(data) : { words: {} };
+  if (savedData) {
+    return savedData;
+  }
+  const defaultValue = { words: {} };
+  const storedData = localStorage.getItem("tbdModeData");
+  if (storedData == null) {
+    savedData = defaultValue;
+    return savedData;
+  }
+  const parsed = JSON.parse(storedData);
+  if (typeof parsed == "object") {
+    savedData = parsed;
+    return savedData;
+  }
+  return defaultValue;
 }
 
 function getDataForWord(word: string): TbdWordData {
@@ -163,8 +178,13 @@ function getSpeedsForWord(word: string): Array<number> {
   return getDataForWord(word).speeds;
 }
 
-function updateSavedData(data: object): void {
+const localStorageUpdater = debounce((data: TbdWordData) => {
   localStorage.setItem("tbdModeData", JSON.stringify(data));
+}, 1000);
+
+function updateSavedData(data: TbdModeData): void {
+  savedData = data;
+  localStorageUpdater(data);
 }
 
 function saveWordData(word: string, wordData: TbdWordData): void {
