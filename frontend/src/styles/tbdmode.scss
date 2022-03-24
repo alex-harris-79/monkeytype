@@ -48,3 +48,14 @@
     justify-content: space-evenly;
   }
 }
+
+@keyframes beaten {
+  50% {
+    background-color: var(--main-color);
+    color: var(--main-color);
+  }
+}
+
+.beaten {
+  animation: beaten 2s;
+}

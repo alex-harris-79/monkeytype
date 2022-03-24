@@ -698,6 +698,7 @@ declare namespace MonkeyTypes {
 
   interface TbdWordData {
     speeds: Array<number>;
+    missedCount: number;
   }
 
   interface TbdModeData {

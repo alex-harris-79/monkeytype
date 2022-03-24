@@ -26,6 +26,12 @@ const $currentThreshold: JQuery<HTMLElement> = $(
 const $wordsRemaining: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsRemaining");
 const $wordsDiv: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsContainer .words");
 
+function addToMissedCount(word: string, missedCount: number): void {
+  const data = getDataForWord(word);
+  data.missedCount += missedCount;
+  saveWordData(word, data);
+}
+
 function handleResultsShownEvent(results: UpdateData): void {
   toggleUI();
   if (!isTbdMode()) {
@@ -35,6 +41,10 @@ function handleResultsShownEvent(results: UpdateData): void {
     saveBurstsFromLatestResults();
     updateModifiedWordset(getNextWordset());
   }
+  Object.keys(TestInput.missedWords).forEach((word: string) => {
+    const missedCount = TestInput.missedWords[word];
+    addToMissedCount(word, missedCount);
+  });
   updateInfo();
 }
 
@@ -138,18 +148,13 @@ function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
 
 function getSavedData(): TbdModeData {
   const data = localStorage.getItem("tbdModeData");
-  return data
-    ? JSON.parse(data)
-    : {
-        words: {},
-      };
+  return data ? JSON.parse(data) : { words: {} };
 }
 
 function getDataForWord(word: string): TbdWordData {
   const data = getSavedData();
   if (!data.words[word]) {
-    data.words[word] = { speeds: [] };
-    updateSavedData(data);
+    return { speeds: [], missedCount: 0 };
   }
   return data.words[word];
 }
@@ -178,9 +183,13 @@ export function addBurst(word: string, speed: number): void {
 export function getNextWordset(): Wordset {
   console.log("getNextWordset");
   const unbeatenWordset = getUnbeatenWordset();
-
+  const originalWordset = getCurrentWordset();
+  const originalUniqueWordset = new Wordset([
+    ...new Set(originalWordset.words),
+  ]);
+  const minimumNewWordsPerLevel = Math.min(originalUniqueWordset.length, 5);
   if (
-    unbeatenWordset.length == 0 ||
+    unbeatenWordset.length < minimumNewWordsPerLevel ||
     (unbeatenWordset.length == 1 && unbeatenWordset.randomWord() == "I")
   ) {
     // there seems to be an issue where sometimes "I" is never chosen as a word in custom with
@@ -189,12 +198,8 @@ export function getNextWordset(): Wordset {
     return getNextWordset();
   }
 
-  const originalWordset = getCurrentWordset();
-  // Add some random words if the unbeaten wordset is too small
-  const originalUniqueWordset = new Wordset([
-    ...new Set(originalWordset.words),
-  ]);
-  const minWordsPerLevel = Math.min(5, originalUniqueWordset.length);
+  // Add some random words just for fun
+  const minWordsPerLevel = Math.min(3, originalUniqueWordset.length);
   if (unbeatenWordset.length >= minWordsPerLevel) {
     return unbeatenWordset;
   } else {
@@ -272,10 +277,20 @@ function updateUiWords(): void {
   });
   currentWordset.words.sort().forEach((word) => {
     const wordElement = getWordElement(word);
+    const wordData = getDataForWord(word);
     $wordsDiv.append(wordElement);
     setTimeout(() => {
-      wordElement.attr("data-beaten", hasWordBeenBeaten(word) ? "1" : "0");
-      wordElement.attr("data-count", getSpeedsForWord(word).length);
+      const beaten = hasWordBeenBeaten(word);
+      if (beaten && wordElement.attr("data-beaten") == "0") {
+        const randomTime = Math.round(Math.random() * 300);
+        setTimeout(() => {
+          animate(wordElement[0], "beaten", "beaten");
+        }, randomTime);
+      }
+
+      wordElement.attr("data-beaten", beaten ? "1" : "0");
+      wordElement.attr("data-count", wordData.speeds.length);
+      wordElement.attr("data-missed", wordData.missedCount);
     }, 0);
   });
 }
@@ -283,13 +298,32 @@ function updateUiWords(): void {
 function getWordElement(word: string): JQuery<HTMLElement> {
   const element = $(`.tbdWord[data-word="${word}"]`);
   if (element.length == 0) {
-    return $(`<span class="tbdWord" data-word="${word}">${word}</span>`);
+    const element = $(
+      `<span class="tbdWord" data-word="${word}">${word}</span>`
+    );
+    return element;
   }
   return element;
 }
 
 export function resetThreshold(): void {
   threshold = 10;
+}
+
+function animate(
+  element: HTMLElement,
+  animationClass: string,
+  animationName: string
+): void {
+  const callback = (event: AnimationEvent): void => {
+    if (event.animationName !== animationName) {
+      return;
+    }
+    element.classList.remove(animationClass);
+    element.removeEventListener("animationend", callback);
+  };
+  element.addEventListener("animationend", callback);
+  element.classList.add(animationClass);
 }
 
 init();
