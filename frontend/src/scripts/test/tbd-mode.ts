@@ -327,7 +327,15 @@ function getWordElement(word: string): JQuery<HTMLElement> {
 }
 
 export function resetThreshold(): void {
-  threshold = 10;
+  const currentWords = getCurrentWordset().words;
+  if (currentWords.some((word: string) => getSpeedsForWord(word).length == 0)) {
+    threshold = 1;
+    return;
+  }
+  const medians = currentWords.map((word: string) =>
+    median(getSpeedsForWord(word))
+  );
+  threshold = Math.min(...medians);
 }
 
 function animate(
