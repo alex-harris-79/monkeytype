@@ -8,15 +8,14 @@ import { median } from "../utils/misc";
 import Config from "../config";
 import Page from "../pages/page";
 import * as ResultsShownEvent from "../observables/results-shown-event";
+import { debounce } from "../utils/debounce";
 import UpdateData = MonkeyTypes.ResultsData;
 import TbdModeData = MonkeyTypes.TbdModeData;
 import TbdWordData = MonkeyTypes.TbdWordData;
-import { debounce } from "../utils/debounce";
 
 let threshold = 10;
 let originalWordset = new Wordset([]);
 let modifiedWordset = new Wordset([]);
-let savedData: TbdModeData;
 let initialized = false;
 
 const thresholdStepSize = 5;
@@ -54,6 +53,18 @@ function handleTestStartedEvent(): void {
   toggleUI();
 }
 
+function resetCurrentWords(): void {
+  if (
+    !confirm("Are you sure you want to reset the stats for the current words?")
+  ) {
+    return;
+  }
+  getCurrentWordset().words.forEach((word: string) => {
+    saveWordData(word, { speeds: [], missedCount: 0 });
+  });
+  updateInfo();
+}
+
 function init(): void {
   if (initialized) {
     return;
@@ -63,6 +74,27 @@ function init(): void {
   WordsetRetrievedEvent.subscribe(handleWordsetUpdate);
   ResultsShownEvent.subscribe(handleResultsShownEvent);
   TestStartedEvent.subscribe(handleTestStartedEvent);
+  document
+    .getElementById("tbdModeResetButton")
+    ?.addEventListener("click", resetCurrentWords);
+  document
+    .getElementById("tbdModeWordsContainer")
+    ?.addEventListener("mouseover", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      if (!target.classList.contains("tbdWord")) {
+        return;
+      }
+      const word = target.dataset["word"];
+      if (word == undefined) {
+        return;
+      }
+      // @ts-ignore
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars,no-unused-vars
+      const wordData = getDataForWord(word);
+    });
   updateInfo();
   initialized = true;
 }
@@ -148,26 +180,39 @@ function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
   }
 }
 
-function getSavedData(): TbdModeData {
-  if (savedData) {
-    return savedData;
+let tbdModeData: TbdModeData;
+
+function getTbdModeData(): TbdModeData {
+  if (tbdModeData) {
+    return tbdModeData;
   }
-  const defaultValue = { words: {} };
+  tbdModeData = { words: {}, config: {} };
+
+  // Try local storage
   const storedData = localStorage.getItem("tbdModeData");
   if (storedData == null) {
-    savedData = defaultValue;
-    return savedData;
+    return tbdModeData;
   }
+
+  // Try parsing local storage
   const parsed = JSON.parse(storedData);
   if (typeof parsed == "object") {
-    savedData = parsed;
-    return savedData;
+    tbdModeData = parsed;
+    return tbdModeData;
   }
-  return defaultValue;
+
+  // localStorage data couldn't be used, so let's start over with the default
+  updateTbdModeData(tbdModeData);
+  return tbdModeData;
+}
+
+function updateTbdModeData(data: TbdModeData): void {
+  tbdModeData = data;
+  localStorageUpdater(data);
 }
 
 function getDataForWord(word: string): TbdWordData {
-  const data = getSavedData();
+  const data = getTbdModeData();
   if (!data.words[word]) {
     return { speeds: [], missedCount: 0 };
   }
@@ -182,15 +227,10 @@ const localStorageUpdater = debounce((data: TbdWordData) => {
   localStorage.setItem("tbdModeData", JSON.stringify(data));
 }, 1000);
 
-function updateSavedData(data: TbdModeData): void {
-  savedData = data;
-  localStorageUpdater(data);
-}
-
 function saveWordData(word: string, wordData: TbdWordData): void {
-  const data = getSavedData();
+  const data = getTbdModeData();
   data.words[word] = wordData;
-  updateSavedData(data);
+  updateTbdModeData(data);
 }
 
 export function addBurst(word: string, speed: number): void {
@@ -318,10 +358,7 @@ function updateUiWords(): void {
 function getWordElement(word: string): JQuery<HTMLElement> {
   const element = $(`.tbdWord[data-word="${word}"]`);
   if (element.length == 0) {
-    const element = $(
-      `<span class="tbdWord" data-word="${word}">${word}</span>`
-    );
-    return element;
+    return $(`<span class="tbdWord" data-word="${word}">${word}</span>`);
   }
   return element;
 }

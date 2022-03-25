@@ -703,5 +703,6 @@ declare namespace MonkeyTypes {
 
   interface TbdModeData {
     words: { [word: string]: TbdWordData };
+    config: { [key: string]: any };
   }
 }
