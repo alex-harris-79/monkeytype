@@ -1526,8 +1526,20 @@
                 title="Next threshold"
               ></div>
             </div>
-            <div class="tbdmode controls">
+            <div id="tbdModeControls" class="tbdmode controls">
               <div class="text-button" id="tbdModeResetButton">Reset Stats</div>
+              <select id="tbdModeSorterSelect">
+                <option value="alphabetical-asc">
+                  Alphabetically Ascending
+                </option>
+                <option value="alphabetical-desc">
+                  Alphabetically Descending
+                </option>
+                <option value="speed-desc">Speed Descending</option>
+                <option value="speed-asc">Speed Ascending</option>
+                <option value="typedCount">Typed Count</option>
+                <option value="missedCount">Missed Count</option>
+              </select>
             </div>
             <div id="tbdModeStats">
               <div>
@@ -1539,8 +1551,8 @@
                 <span class="tbdmode wordsRemaining"></span>
               </div>
             </div>
-            <div id="tbdModeWordInfo"></div>
             <div id="tbdModeWordsContainer" class="tbdMode wordsContainer">
+              <div id="tbdModeWordInfo"></div>
               <div class="words"></div>
             </div>
           </div>

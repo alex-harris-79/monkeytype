@@ -4,7 +4,7 @@ import * as PageChangeEvent from "../observables/page-change-event";
 import * as WordsetRetrievedEvent from "../observables/wordset-retrieved-event";
 import * as ConfigEvent from "../observables/config-event";
 import * as TestStartedEvent from "../observables/test-started-event";
-import { median } from "../utils/misc";
+import { median, mean } from "../utils/misc";
 import Config from "../config";
 import Page from "../pages/page";
 import * as ResultsShownEvent from "../observables/results-shown-event";
@@ -13,10 +13,11 @@ import UpdateData = MonkeyTypes.ResultsData;
 import TbdModeData = MonkeyTypes.TbdModeData;
 import TbdWordData = MonkeyTypes.TbdWordData;
 
-let threshold = 10;
+let threshold = 1;
 let originalWordset = new Wordset([]);
 let modifiedWordset = new Wordset([]);
 let initialized = false;
+type WordSorter = (word: string, word2: string) => number;
 
 const thresholdStepSize = 5;
 const $tbdModeInfo: JQuery<HTMLElement> = $("#tbdmodeInfo");
@@ -26,6 +27,7 @@ const $currentThreshold: JQuery<HTMLElement> = $(
 );
 const $wordsRemaining: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsRemaining");
 const $wordsDiv: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsContainer .words");
+const $wordInfo: JQuery<HTMLElement> = $("#tbdModeWordInfo");
 
 function addToMissedCount(word: string, missedCount: number): void {
   const data = getDataForWord(word);
@@ -77,26 +79,76 @@ function init(): void {
   document
     .getElementById("tbdModeResetButton")
     ?.addEventListener("click", resetCurrentWords);
-  document
-    .getElementById("tbdModeWordsContainer")
-    ?.addEventListener("mouseover", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) {
-        return;
-      }
-      if (!target.classList.contains("tbdWord")) {
-        return;
-      }
-      const word = target.dataset["word"];
-      if (word == undefined) {
-        return;
-      }
-      // @ts-ignore
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars,no-unused-vars
-      const wordData = getDataForWord(word);
-    });
+  const tbdModeWordsContainer = document.getElementById(
+    "tbdModeWordsContainer"
+  );
+  tbdModeWordsContainer?.addEventListener("mouseover", updateWordInfo);
+  tbdModeWordsContainer?.addEventListener("mouseleave", () =>
+    $wordInfo.hide(400)
+  );
+  $wordInfo.hide(0);
   updateInfo();
+  initSorter();
   initialized = true;
+}
+
+function initSorter(): void {
+  [...document.querySelectorAll("#tbdModeSorterSelect option")].forEach(
+    (option) => {
+      if (!(option instanceof HTMLOptionElement)) {
+        return;
+      }
+      const sorter = configGet("sorter");
+      if (option["value"] == sorter) {
+        option["selected"] = true;
+      }
+    }
+  );
+
+  document
+    .getElementById("tbdModeSorterSelect")
+    ?.addEventListener("change", (event: Event) => {
+      // @ts-ignore
+      configSet("sorter", event?.target?.value);
+      updateUiWords();
+    });
+}
+
+function updateWordInfo(event: MouseEvent): void {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+  if (!target.classList.contains("tbdWord")) {
+    return;
+  }
+  const word = target.dataset["word"];
+  if (word == undefined) {
+    return;
+  }
+  const wordData = getDataForWord(word);
+  if (wordData.speeds.length) {
+    $wordInfo.html(
+      `
+      <dl>
+        <dt>Word</dt>
+        <dd>${word}</dd>
+        <dt>Counts</dt>
+        <dd>Successfully: ${wordData.speeds.length}</dd>
+        <dd>Missed: ${getMistypedCountForWord(word)}</dd>
+
+        <dt>Speeds</dt>
+        <dd>Slowest: ${getSlowestSpeedForWord(word)}</dd>
+        <dd>Mean: ${getMeanSpeedForWord(word)}</dd>
+        <dd>Median: ${getMedianSpeedForWord(word)}</dd>
+        <dd>Fastest: ${getFastestSpeedForWord(word)}</dd>
+      </dl>`.trim()
+    );
+    getWordElement(word).append($wordInfo);
+    $wordInfo.show(400);
+  } else {
+    $wordInfo.hide();
+  }
 }
 
 export function getWord(): string {
@@ -184,7 +236,7 @@ let tbdModeData: TbdModeData;
 
 function getTbdModeData(): TbdModeData {
   if (tbdModeData) {
-    return tbdModeData;
+    return <TbdModeData>tbdModeData;
   }
   tbdModeData = { words: {}, config: {} };
 
@@ -221,6 +273,44 @@ function getDataForWord(word: string): TbdWordData {
 
 function getSpeedsForWord(word: string): Array<number> {
   return getDataForWord(word).speeds;
+}
+
+function getSlowestSpeedForWord(word: string): number {
+  const speeds = getSpeedsForWord(word);
+  if (speeds.length == 0) {
+    return 0;
+  }
+
+  return Math.min(...speeds);
+}
+
+function getFastestSpeedForWord(word: string): number {
+  const speeds = getSpeedsForWord(word);
+  if (speeds.length == 0) {
+    return 0;
+  }
+
+  return Math.max(...speeds);
+}
+
+function getMistypedCountForWord(word: string): number {
+  return getDataForWord(word).missedCount;
+}
+
+function getMedianSpeedForWord(word: string): number {
+  const speeds = getSpeedsForWord(word);
+  if (speeds.length == 0) {
+    return 0;
+  }
+  return median(speeds);
+}
+
+function getMeanSpeedForWord(word: string): number {
+  const speeds = getSpeedsForWord(word);
+  if (speeds.length == 0) {
+    return 0;
+  }
+  return mean(speeds);
 }
 
 const localStorageUpdater = debounce((data: TbdWordData) => {
@@ -335,7 +425,7 @@ function updateUiWords(): void {
       wordElement.parentElement.removeChild(wordElement);
     }
   });
-  currentWordset.words.sort().forEach((word) => {
+  currentWordset.words.sort(getSorter()).forEach((word) => {
     const wordElement = getWordElement(word);
     const wordData = getDataForWord(word);
     $wordsDiv.append(wordElement);
@@ -344,7 +434,7 @@ function updateUiWords(): void {
       if (beaten && wordElement.attr("data-beaten") == "0") {
         const randomTime = Math.round(Math.random() * 300);
         setTimeout(() => {
-          animate(wordElement[0], "beaten", "beaten");
+          animate(wordElement[0], "beaten");
         }, randomTime);
       }
 
@@ -358,7 +448,7 @@ function updateUiWords(): void {
 function getWordElement(word: string): JQuery<HTMLElement> {
   const element = $(`.tbdWord[data-word="${word}"]`);
   if (element.length == 0) {
-    return $(`<span class="tbdWord" data-word="${word}">${word}</span>`);
+    return $(`<div class="tbdWord" data-word="${word}">${word}</div>`);
   }
   return element;
 }
@@ -378,9 +468,12 @@ export function resetThreshold(): void {
 function animate(
   element: HTMLElement,
   animationClass: string,
-  animationName: string
+  animationName?: string
 ): void {
   const callback = (event: AnimationEvent): void => {
+    if (animationName == null) {
+      animationName = animationClass;
+    }
     if (event.animationName !== animationName) {
       return;
     }
@@ -389,6 +482,66 @@ function animate(
   };
   element.addEventListener("animationend", callback);
   element.classList.add(animationClass);
+}
+
+function getSorter(): WordSorter {
+  switch (configGet("sorter")) {
+    case "alphabetical-asc":
+      return alphabeticalAscendingSorter;
+    case "alphabetical-desc":
+      return alphabeticalDescendingSorter;
+    case "speed-asc":
+      return speedAscendingSorter;
+    case "speed-desc":
+      return speedDescendingSorter;
+    case "typedCount":
+      return typedCountSorter;
+    case "missedCount":
+      return missedCountSorter;
+  }
+  return alphabeticalAscendingSorter;
+}
+
+const alphabeticalDescendingSorter = (word: string, word2: string): number => {
+  return word < word2 ? 1 : -1;
+};
+
+const alphabeticalAscendingSorter = (word: string, word2: string): number => {
+  return word < word2 ? -1 : 1;
+};
+
+const speedAscendingSorter = (word: string, word2: string): number => {
+  const speed1 = getMedianSpeedForWord(word);
+  const speed2 = getMedianSpeedForWord(word2);
+  return speed1 - speed2;
+};
+
+const speedDescendingSorter = (word: string, word2: string): number => {
+  const speed1 = getMedianSpeedForWord(word);
+  const speed2 = getMedianSpeedForWord(word2);
+  return speed2 - speed1;
+};
+
+const typedCountSorter = (word: string, word2: string): number => {
+  const typed1 = getSpeedsForWord(word).length;
+  const typed2 = getSpeedsForWord(word2).length;
+  return typed2 - typed1;
+};
+
+const missedCountSorter = (word: string, word2: string): number => {
+  return getMistypedCountForWord(word2) - getMistypedCountForWord(word);
+};
+
+function configGet(key: string): string {
+  const configData = getTbdModeData().config;
+  return configData[key] || "";
+}
+
+// Strings ensure we can store in localStorage
+function configSet(key: string, value: string): void {
+  const data = getTbdModeData();
+  data.config[key] = value;
+  updateTbdModeData(data);
 }
 
 init();

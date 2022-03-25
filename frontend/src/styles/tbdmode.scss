@@ -33,6 +33,7 @@
 
       .tbdWord {
         margin: 0 8px;
+        position: relative;
         transition: color 2s ease-out;
 
         &[data-beaten="1"] {
@@ -47,10 +48,42 @@
     display: flex;
     justify-content: space-evenly;
   }
+
+  #tbdModeWordInfo {
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    z-index: 1;
+    padding: 0.5rem 1rem;
+    position: absolute;
+    border: 1px solid var(--text-color);
+    bottom: 2rem;
+    left: -4rem;
+    dl {
+      width: 10.5rem;
+    }
+    dt {
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+    dd {
+      margin-left: 1rem;
+    }
+  }
+
+  #tbdModeControls {
+    & > * {
+      display: inline-block;
+    }
+    #tbdModeSorterSelect {
+      background-color: var(--bg-color);
+      color: var(--main-color);
+      padding: 0.2rem;
+    }
+  }
 }
 
 @keyframes beaten {
-  50% {
+  20% {
     background-color: var(--main-color);
     color: var(--main-color);
   }
