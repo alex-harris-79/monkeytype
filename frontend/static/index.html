@@ -1528,6 +1528,11 @@
             </div>
             <div id="tbdModeControls" class="tbdmode controls">
               <div class="text-button" id="tbdModeResetButton">Reset Stats</div>
+              <div class="spacer">|</div>
+              <div class="text-button" id="tbdModeSetTargetButton">
+                Set Target Speed
+              </div>
+              <div class="spacer">|</div>
               <select id="tbdModeSorterSelect">
                 <option value="alphabetical-asc">
                   Alphabetically Ascending
@@ -1544,11 +1549,14 @@
             <div id="tbdModeStats">
               <div>
                 Current Threshold:
-                <span class="tbdmode threshold currentThreshold"></span>
+                <span
+                  id="tbdModeCurrentThreshold"
+                  class="tbdmode threshold currentThreshold"
+                ></span>
               </div>
               <div>
-                Words Remaining:
-                <span class="tbdmode wordsRemaining"></span>
+                Target:
+                <span id="tbdModeTargetThreshold"></span>
               </div>
             </div>
             <div id="tbdModeWordsContainer" class="tbdMode wordsContainer">

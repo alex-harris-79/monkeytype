@@ -22,10 +22,8 @@ type WordSorter = (word: string, word2: string) => number;
 const thresholdStepSize = 5;
 const $tbdModeInfo: JQuery<HTMLElement> = $("#tbdmodeInfo");
 const $progressMeter: JQuery<HTMLElement> = $("#tbdmodeInfo .progressMeter");
-const $currentThreshold: JQuery<HTMLElement> = $(
-  "#tbdmodeInfo .currentThreshold"
-);
-const $wordsRemaining: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsRemaining");
+const $currentThreshold: JQuery<HTMLElement> = $("#tbdModeCurrentThreshold");
+const $targetThreshold: JQuery<HTMLElement> = $("#tbdModeTargetThreshold");
 const $wordsDiv: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsContainer .words");
 const $wordInfo: JQuery<HTMLElement> = $("#tbdModeWordInfo");
 
@@ -67,6 +65,16 @@ function resetCurrentWords(): void {
   updateInfo();
 }
 
+function updateTargetSpeed(): void {
+  const newTarget = parseInt(prompt("New target speed") || "");
+  if (newTarget > 0) {
+    configSet("targetSpeed", newTarget.toString());
+    updateInfo();
+  } else {
+    alert("Invalid speed. Try a number above 0 next time.");
+  }
+}
+
 function init(): void {
   if (initialized) {
     return;
@@ -79,6 +87,9 @@ function init(): void {
   document
     .getElementById("tbdModeResetButton")
     ?.addEventListener("click", resetCurrentWords);
+  document
+    .getElementById("tbdModeSetTargetButton")
+    ?.addEventListener("click", updateTargetSpeed);
   const tbdModeWordsContainer = document.getElementById(
     "tbdModeWordsContainer"
   );
@@ -199,13 +210,6 @@ function getUnbeatenWordset(): Wordset {
   return unbeatenWordset;
 }
 
-function getBeatenWordset(): Wordset {
-  const current = getCurrentWordset();
-  const unbeaten = getUnbeatenWordset();
-  const beaten = current.words.filter((word) => !unbeaten.words.includes(word));
-  return new Wordset(beaten);
-}
-
 function funboxChangeHandler(
   key: string,
   funbox?: MonkeyTypes.ConfigValues
@@ -310,7 +314,7 @@ function getMeanSpeedForWord(word: string): number {
   if (speeds.length == 0) {
     return 0;
   }
-  return mean(speeds);
+  return Math.round(mean(speeds));
 }
 
 const localStorageUpdater = debounce((data: TbdWordData) => {
@@ -337,13 +341,8 @@ export function getNextWordset(): Wordset {
   const originalUniqueWordset = new Wordset([
     ...new Set(originalWordset.words),
   ]);
-  const minimumNewWordsPerLevel = Math.min(originalUniqueWordset.length, 5);
-  if (
-    unbeatenWordset.length < minimumNewWordsPerLevel ||
-    (unbeatenWordset.length == 1 && unbeatenWordset.randomWord() == "I")
-  ) {
-    // there seems to be an issue where sometimes "I" is never chosen as a word in custom with
-    // random enabled
+  const minimumNewWordsPerLevel = Math.min(originalUniqueWordset.length, 2);
+  if (unbeatenWordset.length < minimumNewWordsPerLevel) {
     bumpThreshold();
     return getNextWordset();
   }
@@ -399,20 +398,22 @@ function saveBurstsFromLatestResults(): void {
   }
 }
 
-function updateProgressMeter(beatenWords: string[]): void {
-  const percentComplete = Math.round(
-    (beatenWords.length / getCurrentWordset().length) * 100
-  );
-  $progressMeter.css("width", `${percentComplete}%`);
+function updateProgressMeter(): void {
+  const targetSpeed = getTargetSpeed();
+  const allWords = getCurrentWordset();
+  const count = allWords.length;
+  const beatenAtTargetCount = allWords.words.filter(
+    (word) => getMedianSpeedForWord(word) > targetSpeed
+  ).length;
+  const percent = (beatenAtTargetCount / count) * 100 || 0;
+  $progressMeter.css("width", `${percent}%`);
 }
 
 export function updateInfo(): void {
-  const unbeatenWordset = getUnbeatenWordset();
-  const beaten = getBeatenWordset();
   updateUiWords();
-  updateProgressMeter(beaten.words);
+  updateProgressMeter();
   $currentThreshold.text(threshold);
-  $wordsRemaining.text(unbeatenWordset.length);
+  $targetThreshold.text(configGet("targetSpeed"));
 }
 
 function updateUiWords(): void {
@@ -431,10 +432,15 @@ function updateUiWords(): void {
     $wordsDiv.append(wordElement);
     setTimeout(() => {
       const beaten = hasWordBeenBeaten(word);
+      const randomTime = Math.round(Math.random() * 300);
       if (beaten && wordElement.attr("data-beaten") == "0") {
-        const randomTime = Math.round(Math.random() * 300);
         setTimeout(() => {
-          animate(wordElement[0], "beaten");
+          animate(wordElement[0], "tbdBeaten");
+        }, randomTime);
+      }
+      if (!beaten && wordElement.attr("data-beaten") == "1") {
+        setTimeout(() => {
+          animate(wordElement[0], "tbdLost");
         }, randomTime);
       }
 
@@ -470,10 +476,10 @@ function animate(
   animationClass: string,
   animationName?: string
 ): void {
+  if (animationName == null) {
+    animationName = animationClass;
+  }
   const callback = (event: AnimationEvent): void => {
-    if (animationName == null) {
-      animationName = animationClass;
-    }
     if (event.animationName !== animationName) {
       return;
     }
@@ -542,6 +548,10 @@ function configSet(key: string, value: string): void {
   const data = getTbdModeData();
   data.config[key] = value;
   updateTbdModeData(data);
+}
+
+function getTargetSpeed(): number {
+  return parseInt(configGet("targetSpeed") || "75");
 }
 
 init();

@@ -32,9 +32,9 @@
       flex-wrap: wrap;
 
       .tbdWord {
-        margin: 0 8px;
+        padding: 0 5px;
         position: relative;
-        transition: color 2s ease-out;
+        color: var(--text-color);
 
         &[data-beaten="1"] {
           color: var(--main-color);
@@ -74,21 +74,43 @@
     & > * {
       display: inline-block;
     }
+    .spacer {
+      color: var(--caret-color);
+    }
     #tbdModeSorterSelect {
       background-color: var(--bg-color);
       color: var(--main-color);
       padding: 0.2rem;
     }
   }
-}
-
-@keyframes beaten {
-  20% {
-    background-color: var(--main-color);
-    color: var(--main-color);
+  @keyframes tbdBeaten {
+    30% {
+      background-color: var(--main-color);
+      color: var(--main-color);
+      transform: scale(1.1);
+    }
+    to {
+      color: var(--main-color);
+    }
   }
-}
+  .tbdBeaten {
+    animation: tbdBeaten 2s;
+  }
 
-.beaten {
-  animation: beaten 2s;
+  @keyframes tbdLost {
+    from {
+      color: var(--main-color);
+    }
+    30% {
+      background-color: var(--error-color);
+      color: var(--error-color);
+      transform: scale(0.8);
+    }
+    to {
+      color: var(--text-color);
+    }
+  }
+  .tbdLost {
+    animation: tbdLost 2s;
+  }
 }
