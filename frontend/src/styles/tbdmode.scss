@@ -70,11 +70,6 @@
   #tbdModeStats {
     display: flex;
     justify-content: space-evenly;
-
-    #tbdModeCurrentThreshold,
-    #tbdModeTargetThreshold {
-      display: inline-block;
-    }
   }
 
   #tbdModeWordInfo {
@@ -87,15 +82,31 @@
     border: 1px solid var(--text-color);
     bottom: 2rem;
     left: -2rem;
-    dl {
-      width: 10.5rem;
+    min-width: 11rem;
+    font-weight: normal;
+    font-size: 1rem;
+
+    .heading {
+      font-size: 1.2rem;
+      color: var(--main-color);
+      margin-top: 0.5rem;
     }
-    dt {
-      font-size: 1.1rem;
-      font-weight: bold;
+
+    .label {
+      color: var(--text-color);
     }
-    dd {
-      margin-left: 1rem;
+
+    .stat.good {
+      color: var(--main-color);
+    }
+
+    .stat.bad {
+      color: var(--error-color);
+    }
+
+    .helpText {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
     }
   }
 

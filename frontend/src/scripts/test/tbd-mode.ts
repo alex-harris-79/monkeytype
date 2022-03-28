@@ -208,30 +208,41 @@ function updateWordInfo(event: MouseEvent): void {
     return;
   }
   const wordData = getDataForWord(word);
+  let wordInfoHtml = `
+      <h3>"${word}"</h3>
+      <div class="heading">Counts</div>
+      <div class="statContainer">
+        <span class="label">Correct: </span>
+        <span class="stat good">${wordData.speeds.length}</span.>
+      </div>
+      <div class="statContainer">
+        <span class="label">Missed: </span>
+        <span class="stat bad">${getMistypedCountForWord(word)}</span>
+      </div>`;
   if (wordData.speeds.length) {
-    $wordInfo.html(
-      `
-      <dl>
-        <dt>Word</dt>
-        <dd>${word}</dd>
-        <dt>Counts</dt>
-        <dd>Successfully: ${wordData.speeds.length}</dd>
-        <dd>Missed: ${getMistypedCountForWord(word)}</dd>
-
-        <dt>Speeds</dt>
-        <dd>Slowest: ${getSlowestSpeedForWord(word)}</dd>
-        <dd>Mean: ${getMeanSpeedForWord(word)}</dd>
-        <dd>Median: ${getMedianSpeedForWord(word)}</dd>
-        <dd>Fastest: ${getFastestSpeedForWord(word)}</dd>
-      </dl>
-      <span>click word to reset data</span>
-    `.trim()
-    );
-    getWordElement(word).append($wordInfo[0]);
-    $wordInfo.show(200);
-  } else {
-    $wordInfo.hide();
+    wordInfoHtml += `
+          <div class="heading">Speeds</div>
+      <div class="statContainer">
+        <span class="label">Worst: </span>
+        <span class="stat bad">${getSlowestSpeedForWord(word)}</span>
+      </div>
+      <div class="statContainer">
+        <span class="label">Mean: </span>
+        <span class="stat">${getMeanSpeedForWord(word)}</span>
+      </div>
+      <div class="statContainer">
+        <span class="label">Median: </span>
+        <span class="stat">${getMedianSpeedForWord(word)}</span>
+      </div>
+      <div class="statContainer">
+        <span class="label">Best: </span>
+        <span class="stat good">${getFastestSpeedForWord(word)}</span>
+      </div>`;
   }
+  wordInfoHtml += `<div class="helpText">click to reset data for '${word}'</div>`;
+  $wordInfo.html(wordInfoHtml);
+  getWordElement(word).append($wordInfo[0]);
+  $wordInfo.show(200);
 }
 
 export function getWord(
