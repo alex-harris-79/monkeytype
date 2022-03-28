@@ -54,6 +54,12 @@
           color: var(--sub-color);
         }
 
+        &[data-typed="0"] > .tbdWord {
+          &::after {
+            content: "*"; // indicate it hasn't been typed yet
+          }
+        }
+
         &[data-beaten-at-group="1"] > .tbdWord {
           color: var(--text-color);
           font-weight: bold;

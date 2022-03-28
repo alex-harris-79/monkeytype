@@ -685,6 +685,8 @@ async function updateUiWords(): Promise<void> {
       )
         ? "1"
         : "0";
+      wordElement.dataset["typed"] =
+        getMedianSpeedForWord(word) == 0 ? "0" : "1";
       const percentComplete = getMedianSpeedForWord(word) / getTargetSpeed();
       const modifier = Math.min(percentComplete, 1);
 
