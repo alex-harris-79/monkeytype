@@ -86,7 +86,7 @@ function updateTargetSpeed(): void {
   //console.log("updateTargetSpeed(): ");
   const newTarget = parseInt(prompt("New target speed") || "");
   if (newTarget > 0) {
-    configSet("targetSpeed", newTarget.toString());
+    TbdConfig.set("targetSpeed", newTarget.toString());
     recalculate();
   }
 }
@@ -96,7 +96,7 @@ function init(): void {
   if (initialized) {
     return;
   }
-  ConfigEvent.subscribe(funboxChangeHandler);
+  ConfigEvent.subscribe(handleFunboxChange);
   PageChangeEvent.subscribe(pageChangeHandler);
   ResultsShownEvent.subscribe(handleResultsShownEvent);
   TestStartedEvent.subscribe(handleTestStartedEvent);
@@ -149,7 +149,7 @@ function initSorter(): void {
       if (!(option instanceof HTMLOptionElement)) {
         return;
       }
-      const sorter = configGet("sorter");
+      const sorter = TbdConfig.get("sorter");
       if (option["value"] == sorter) {
         option["selected"] = true;
       }
@@ -160,7 +160,7 @@ function initSorter(): void {
     .getElementById("tbdModeSorterSelect")
     ?.addEventListener("change", (event: Event) => {
       // @ts-ignore
-      configSet("sorter", event?.target?.value);
+      TbdConfig.set("sorter", event?.target?.value);
       triggerUpdateUiWords();
     });
 }
@@ -403,19 +403,12 @@ function getUnbeatenWords(wordset: Wordset, atThreshold?: number): Set<string> {
   return unbeatenWords;
 }
 
-function funboxChangeHandler(
-  key: string,
-  funbox?: MonkeyTypes.ConfigValues
+function handleFunboxChange(
+  _key: string,
+  _funbox?: MonkeyTypes.ConfigValues
 ): void {
   //console.log("funboxChangeHandler(key: ");
-  if (key != "funbox") {
-    return;
-  }
-  if (funbox == "tbdmode") {
-    $tbdModeInfo.removeClass("hidden");
-  } else {
-    $tbdModeInfo.addClass("hidden");
-  }
+  toggleUI();
 }
 
 function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
@@ -424,10 +417,10 @@ function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
     return;
   }
   const pagesToShowInfo = ["test"];
-  if (!pagesToShowInfo.includes(nextPage.name)) {
-    $tbdModeInfo.addClass("hidden");
+  if (pagesToShowInfo.includes(nextPage.name)) {
+    $tbdModeInfo.show();
   } else {
-    $tbdModeInfo.removeClass("hidden");
+    $tbdModeInfo.hide();
   }
 }
 
@@ -579,9 +572,9 @@ function isTbdMode(): boolean {
 function toggleUI(): void {
   //console.log("toggleUI(): ");
   if (isTbdMode()) {
-    $tbdModeInfo.removeClass("hidden");
+    $tbdModeInfo.show();
   } else {
-    $tbdModeInfo.addClass("hidden");
+    $tbdModeInfo.hide();
   }
 }
 
@@ -632,7 +625,7 @@ export function updateInfo(): void {
   triggerUpdateUiWords();
   updateTotalProgressMeter();
   updateGroupProgressMeter();
-  $targetThreshold.text(configGet("targetSpeed"));
+  $targetThreshold.text(TbdConfig.get("targetSpeed"));
   $groupThreshold.text(getCurrentGroupThreshold());
 }
 
@@ -768,7 +761,7 @@ function animate(element: HTMLElement, animation: string, delay = 0): void {
 
 function getSorter(): WordSorter {
   //console.log("getSorter(): ");
-  switch (configGet("sorter")) {
+  switch (TbdConfig.get("sorter")) {
     case "alphabetical-asc":
       return alphabeticalAscendingSorter;
     case "alphabetical-desc":
@@ -825,27 +818,26 @@ const missedCountSorter = (word: string, word2: string): number => {
   return getMistypedCountForWord(word2) - getMistypedCountForWord(word);
 };
 
-function configGet(key: string): string {
-  //console.log("configGet(key: ");
-  const configData = getTbdModeData().config;
-  return configData[key] || "";
-}
-
-// Strings ensure we can store in localStorage
-function configSet(key: string, value: string): void {
-  // console.log("configSet(key: ");
-  const data = getTbdModeData();
-  data.config[key] = value;
-  updateTbdModeData(data);
-}
-
 function getTargetSpeed(): number {
   //console.log("getTargetSpeed(): ");
-  return parseInt(configGet("targetSpeed") || "75");
+  return parseInt(TbdConfig.get("targetSpeed") || "75");
 }
 
 function getGroupSize(): number {
-  return parseInt(configGet("groupSize") || "30)");
+  return parseInt(TbdConfig.get("groupSize") || "30)");
+}
+
+class TbdConfig {
+  static get(key: string): string {
+    const configData = getTbdModeData().config;
+    return configData[key] || "";
+  }
+
+  static set(key: string, value: string): void {
+    const data = getTbdModeData();
+    data.config[key] = value;
+    updateTbdModeData(data);
+  }
 }
 
 init();

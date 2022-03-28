@@ -1516,53 +1516,6 @@
               <div class="ssWatermark hidden">monkeytype.com</div>
             </div>
           </div>
-          <div id="tbdmodeInfo">
-            <div id="tbdModeProgress">
-              <div class="tbdmode progressMeterContainer">
-                <div class="tbdmode progressMeterTotal"></div>
-                <div class="tbdmode progressMeterGroup"></div>
-              </div>
-              <div
-                class="tbdmode threshold nextThreshold"
-                title="Next threshold"
-              ></div>
-            </div>
-            <div id="tbdModeControls" class="tbdmode controls">
-              <div class="text-button" id="tbdModeResetButton">Reset Stats</div>
-              <div class="spacer">|</div>
-              <div class="text-button" id="tbdModeSetTargetButton">
-                Set Target Speed
-              </div>
-              <div class="spacer">|</div>
-              <span>Sort By</span>
-              <select id="tbdModeSorterSelect">
-                <option value="alphabetical-asc">
-                  Alphabetically Ascending
-                </option>
-                <option value="alphabetical-desc">
-                  Alphabetically Descending
-                </option>
-                <option value="speed-desc">Speed Descending</option>
-                <option value="speed-asc">Speed Ascending</option>
-                <option value="typedCount">Typed Count</option>
-                <option value="missedCount">Missed Count</option>
-              </select>
-            </div>
-            <div id="tbdModeStats">
-              <div>
-                <span>Group Threshold:</span>
-                <span id="tbdModeGroupThreshold"></span>
-              </div>
-              <div>
-                <span>Target Speed:</span>
-                <span id="tbdModeTargetThreshold"></span>
-              </div>
-            </div>
-            <div id="tbdModeWordsContainer" class="tbdMode wordsContainer">
-              <div id="tbdModeWordInfo"></div>
-              <div class="words"></div>
-            </div>
-          </div>
           <div class="page pageAbout hidden">
             <div class="scrollToTopButton invisible">
               <i class="fas fa-angle-double-up"></i>
@@ -4923,6 +4876,51 @@
                 <div class="loadMoreButton">load more</div>
               </div>
             </div>
+          </div>
+        </div>
+        <div id="tbdmodeInfo" style="display: none">
+          <div id="tbdModeProgress">
+            <div class="tbdmode progressMeterContainer">
+              <div class="tbdmode progressMeterTotal"></div>
+              <div class="tbdmode progressMeterGroup"></div>
+            </div>
+            <div
+              class="tbdmode threshold nextThreshold"
+              title="Next threshold"
+            ></div>
+          </div>
+          <div id="tbdModeControls" class="tbdmode controls">
+            <div class="text-button" id="tbdModeResetButton">Reset Stats</div>
+            <div class="spacer">|</div>
+            <div class="text-button" id="tbdModeSetTargetButton">
+              Set Target Speed
+            </div>
+            <div class="spacer">|</div>
+            <span>Sort By</span>
+            <select id="tbdModeSorterSelect">
+              <option value="alphabetical-asc">Alphabetically Ascending</option>
+              <option value="alphabetical-desc">
+                Alphabetically Descending
+              </option>
+              <option value="speed-desc">Speed Descending</option>
+              <option value="speed-asc">Speed Ascending</option>
+              <option value="typedCount">Typed Count</option>
+              <option value="missedCount">Missed Count</option>
+            </select>
+          </div>
+          <div id="tbdModeStats">
+            <div>
+              <span>Group Threshold:</span>
+              <span id="tbdModeGroupThreshold"></span>
+            </div>
+            <div>
+              <span>Target Speed:</span>
+              <span id="tbdModeTargetThreshold"></span>
+            </div>
+          </div>
+          <div id="tbdModeWordsContainer" class="tbdMode wordsContainer">
+            <div id="tbdModeWordInfo"></div>
+            <div class="words"></div>
           </div>
         </div>
         <div id="bottom">
