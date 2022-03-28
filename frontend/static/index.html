@@ -220,7 +220,7 @@
           <div class="button" quote="1">medium</div>
           <div class="button" quote="2">long</div>
           <div class="button" quote="3">thicc</div>
-          <div class="button" quote="-2">search</div>
+          <div id="quote-search-button" class="button" quote="-2">search</div>
         </div>
         <div class="group customGroup hidden">
           <div class="button customChange">change</div>
@@ -391,7 +391,11 @@
         <div class="inputs">
           <label class="checkbox">
             <input type="checkbox" />
-            <div class="customTextCheckbox"></div>
+            <div class="customTextCheckbox">
+              <div class="check">
+                <i class="fas fa-fw fa-check"></i>
+              </div>
+            </div>
             Random
             <span>
               Randomize the above words, and control how many words are
@@ -411,7 +415,11 @@
           </div>
           <label class="checkbox typographyCheck">
             <input type="checkbox" checked />
-            <div class="customTextCheckbox customTextTypographyCheckbox"></div>
+            <div class="customTextCheckbox customTextTypographyCheckbox">
+              <div class="check">
+                <i class="fas fa-fw fa-check"></i>
+              </div>
+            </div>
             Remove Fancy Typography
             <span>
               Standardises typography symbols (for example “ and ” become ")
@@ -419,7 +427,11 @@
           </label>
           <label class="checkbox delimiterCheck">
             <input type="checkbox" />
-            <div class="customTextCheckbox customTextDelimiterCheckbox"></div>
+            <div class="customTextCheckbox customTextDelimiterCheckbox">
+              <div class="check">
+                <i class="fas fa-fw fa-check"></i>
+              </div>
+            </div>
             Pipe Delimiter
             <span>
               Change how words are separated. Using the pipe delimiter allows
@@ -661,7 +673,11 @@
         <input type="text" class="text" />
         <label class="checkbox">
           <input type="checkbox" />
-          <div class="customTextCheckbox"></div>
+          <div class="customTextCheckbox">
+            <div class="check">
+              <i class="fas fa-fw fa-check"></i>
+            </div>
+          </div>
           Change preset to current settings
         </label>
         <div class="button"><i class="fas fa-plus"></i></div>
@@ -4014,27 +4030,44 @@
                   </div>
                 </div>
               </div>
-              <div class="section showAvg">
+              <div class="section showAverage">
                 <h1>average</h1>
                 <div class="text">
-                  Displays your average speed over the last 10 tests.
+                  Displays your average wpm and/or accuracy over the last 10
+                  tests.
                 </div>
                 <div class="buttons">
                   <div
                     class="button"
-                    showAvg="false"
+                    showAverage="off"
                     tabindex="0"
                     onclick="this.blur();"
                   >
-                    hide
+                    off
                   </div>
                   <div
                     class="button"
-                    showAvg="true"
+                    showAverage="wpm"
                     tabindex="0"
                     onclick="this.blur();"
                   >
-                    show
+                    wpm
+                  </div>
+                  <div
+                    class="button"
+                    showAverage="acc"
+                    tabindex="0"
+                    onclick="this.blur();"
+                  >
+                    acc
+                  </div>
+                  <div
+                    class="button"
+                    showAverage="both"
+                    tabindex="0"
+                    onclick="this.blur();"
+                  >
+                    both
                   </div>
                 </div>
               </div>
@@ -4388,7 +4421,11 @@
                 <div>
                   <label id="rememberMe" class="checkbox">
                     <input type="checkbox" checked />
-                    <div class="customTextCheckbox"></div>
+                    <div class="customTextCheckbox">
+                      <div class="check">
+                        <i class="fas fa-fw fa-check"></i>
+                      </div>
+                    </div>
                     Remember me
                   </label>
                 </div>
