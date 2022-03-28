@@ -701,6 +701,8 @@ declare namespace MonkeyTypes {
     missedCount: number;
   }
 
+  type TbdMedianSpeeds = { [word: string]: number };
+
   interface TbdModeData {
     words: { [word: string]: TbdWordData };
     config: { [key: string]: any };

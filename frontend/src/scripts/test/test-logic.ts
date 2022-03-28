@@ -617,7 +617,7 @@ function applyFunboxesToWord(word: string, wordset?: Wordset.Wordset): string {
   } else if (wordset !== undefined && Config.funbox === "weakspot") {
     word = WeakSpot.getWord(wordset);
   } else if (wordset !== undefined && Config.funbox === "tbdmode") {
-    word = TbdMode.getWord();
+    word = TbdMode.getWord(wordset, word);
   }
   return word;
 }

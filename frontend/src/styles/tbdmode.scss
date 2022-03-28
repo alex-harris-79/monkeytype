@@ -18,11 +18,20 @@
       color: var(--main-color);
     }
 
-    .progressMeter {
-      height: 1rem;
+    .progressMeterTotal,
+    .progressMeterGroup {
       width: 0;
-      background-color: var(--main-color);
       transition: width 1s ease-in-out;
+    }
+
+    .progressMeterTotal {
+      background-color: var(--main-color);
+      height: 1rem;
+    }
+
+    .progressMeterGroup {
+      height: 0.5rem;
+      background-color: var(--colorful-error-extra-color);
     }
   }
 
@@ -31,12 +40,26 @@
       display: flex;
       flex-wrap: wrap;
 
-      .tbdWord {
+      .tbdWordContainer {
         padding: 0 5px;
         position: relative;
         color: var(--text-color);
+        &:hover {
+          cursor: crosshair;
+        }
 
-        &[data-beaten="1"] {
+        .tbdWord {
+          transition: 1500ms ease;
+          font-size: 1.5rem; // Same as test words
+          color: var(--sub-color);
+        }
+
+        &[data-beaten-at-group="1"] > .tbdWord {
+          color: var(--text-color);
+          font-weight: bold;
+        }
+
+        &[data-beaten-at-target="1"] > .tbdWord {
           color: var(--main-color);
           font-weight: bold;
         }
@@ -47,17 +70,23 @@
   #tbdModeStats {
     display: flex;
     justify-content: space-evenly;
+
+    #tbdModeCurrentThreshold,
+    #tbdModeTargetThreshold {
+      display: inline-block;
+    }
   }
 
   #tbdModeWordInfo {
+    opacity: 1;
     color: var(--text-color);
     background-color: var(--bg-color);
-    z-index: 1;
+    z-index: 1000; // 1 above the out of focus warning
     padding: 0.5rem 1rem;
     position: absolute;
     border: 1px solid var(--text-color);
     bottom: 2rem;
-    left: -4rem;
+    left: -2rem;
     dl {
       width: 10.5rem;
     }
@@ -83,34 +112,23 @@
       padding: 0.2rem;
     }
   }
-  @keyframes tbdBeaten {
-    30% {
-      background-color: var(--main-color);
-      color: var(--main-color);
-      transform: scale(1.1);
-    }
-    to {
-      color: var(--main-color);
-    }
-  }
-  .tbdBeaten {
-    animation: tbdBeaten 2s;
-  }
+}
 
-  @keyframes tbdLost {
-    from {
-      color: var(--main-color);
-    }
-    30% {
-      background-color: var(--error-color);
-      color: var(--error-color);
-      transform: scale(0.8);
-    }
-    to {
-      color: var(--text-color);
-    }
+@keyframes tbdBeaten {
+  50% {
+    background-color: var(--main-color);
   }
-  .tbdLost {
-    animation: tbdLost 2s;
+}
+.tbdBeaten {
+  animation: tbdBeaten 1s;
+}
+
+@keyframes tbdLost {
+  30% {
+    background-color: var(--error-color);
+    transform: translateY(13%);
   }
+}
+.tbdLost {
+  animation: tbdLost 1s;
 }

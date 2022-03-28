@@ -1,46 +1,56 @@
 import { Wordset } from "./wordset";
 import * as TestInput from "./test-input";
 import * as PageChangeEvent from "../observables/page-change-event";
-import * as WordsetRetrievedEvent from "../observables/wordset-retrieved-event";
 import * as ConfigEvent from "../observables/config-event";
 import * as TestStartedEvent from "../observables/test-started-event";
-import { median, mean } from "../utils/misc";
+import { mean, median } from "../utils/misc";
 import Config from "../config";
 import Page from "../pages/page";
 import * as ResultsShownEvent from "../observables/results-shown-event";
+import * as WordTypedEvent from "../observables/word-typed-event";
 import { debounce } from "../utils/debounce";
 import UpdateData = MonkeyTypes.ResultsData;
 import TbdModeData = MonkeyTypes.TbdModeData;
 import TbdWordData = MonkeyTypes.TbdWordData;
+import TbdMedianSpeeds = MonkeyTypes.TbdMedianSpeeds;
 
-let threshold = 1;
-let originalWordset = new Wordset([]);
-let modifiedWordset = new Wordset([]);
+let currentGroupThreshold = 1;
+let monkeyTypeWordset = new Wordset([]);
+let currentGroupUnbeatenWordset = new Wordset([]);
 let initialized = false;
+const medianSpeeds: TbdMedianSpeeds = {};
 type WordSorter = (word: string, word2: string) => number;
 
-const thresholdStepSize = 5;
+const groupThresholdStepSize = 5;
 const $tbdModeInfo: JQuery<HTMLElement> = $("#tbdmodeInfo");
-const $progressMeter: JQuery<HTMLElement> = $("#tbdmodeInfo .progressMeter");
-const $currentThreshold: JQuery<HTMLElement> = $("#tbdModeCurrentThreshold");
+const $progressMeterTotal: JQuery<HTMLElement> = $(
+  "#tbdmodeInfo .progressMeterTotal"
+);
+const $progressMeterGroup: JQuery<HTMLElement> = $(
+  "#tbdmodeInfo .progressMeterGroup"
+);
 const $targetThreshold: JQuery<HTMLElement> = $("#tbdModeTargetThreshold");
+const $groupThreshold: JQuery<HTMLElement> = $("#tbdModeGroupThreshold");
 const $wordsDiv: JQuery<HTMLElement> = $("#tbdmodeInfo .wordsContainer .words");
 const $wordInfo: JQuery<HTMLElement> = $("#tbdModeWordInfo");
 
 function addToMissedCount(word: string, missedCount: number): void {
+  // console.log("addToMissedCount(word: ");
   const data = getDataForWord(word);
   data.missedCount += missedCount;
   saveWordData(word, data);
 }
 
 function handleResultsShownEvent(results: UpdateData): void {
+  //console.log("handleResultsShownEvent(results: ");
   toggleUI();
   if (!isTbdMode()) {
     return;
   }
   if (!results.difficultyFailed) {
     saveBurstsFromLatestResults();
-    updateModifiedWordset(getNextWordset());
+    resetCurrentGroupThreshold();
+    updateCurrentGroupUnbeatenWordset();
   }
   Object.keys(TestInput.missedWords).forEach((word: string) => {
     const missedCount = TestInput.missedWords[word];
@@ -50,40 +60,47 @@ function handleResultsShownEvent(results: UpdateData): void {
 }
 
 function handleTestStartedEvent(): void {
+  // console.log("handleTestStartedEvent(): ");
   toggleUI();
 }
 
 function resetCurrentWords(): void {
+  //console.log("resetCurrentWords(): ");
   if (
     !confirm("Are you sure you want to reset the stats for the current words?")
   ) {
     return;
   }
-  getCurrentWordset().words.forEach((word: string) => {
-    saveWordData(word, { speeds: [], missedCount: 0 });
+  getMonkeyTypeWordset().words.forEach((word: string) => {
+    resetStatsForWord(word);
   });
-  updateInfo();
+}
+
+function resetStatsForWord(word: string): void {
+  // console.log("resetStatsForWord(word: ");
+  saveWordData(word, { speeds: [], missedCount: 0 });
+  debouncedRecalculate();
 }
 
 function updateTargetSpeed(): void {
+  //console.log("updateTargetSpeed(): ");
   const newTarget = parseInt(prompt("New target speed") || "");
   if (newTarget > 0) {
     configSet("targetSpeed", newTarget.toString());
-    updateInfo();
-  } else {
-    alert("Invalid speed. Try a number above 0 next time.");
+    recalculate();
   }
 }
 
 function init(): void {
+  // console.log("init(): ");
   if (initialized) {
     return;
   }
   ConfigEvent.subscribe(funboxChangeHandler);
   PageChangeEvent.subscribe(pageChangeHandler);
-  WordsetRetrievedEvent.subscribe(handleWordsetUpdate);
   ResultsShownEvent.subscribe(handleResultsShownEvent);
   TestStartedEvent.subscribe(handleTestStartedEvent);
+  WordTypedEvent.subscribe(handleWordTyped);
   document
     .getElementById("tbdModeResetButton")
     ?.addEventListener("click", resetCurrentWords);
@@ -93,17 +110,40 @@ function init(): void {
   const tbdModeWordsContainer = document.getElementById(
     "tbdModeWordsContainer"
   );
-  tbdModeWordsContainer?.addEventListener("mouseover", updateWordInfo);
-  tbdModeWordsContainer?.addEventListener("mouseleave", () =>
-    $wordInfo.hide(400)
-  );
+  if (tbdModeWordsContainer) {
+    tbdModeWordsContainer.addEventListener("mousemove", updateWordInfo);
+    tbdModeWordsContainer.addEventListener("click", handleResetStatsClick);
+    tbdModeWordsContainer.addEventListener("mouseleave", () =>
+      $wordInfo.hide(0)
+    );
+  }
   $wordInfo.hide(0);
-  updateInfo();
   initSorter();
+  updateMedianSpeedCache();
+  updateWordsetGroups(getMonkeyTypeWordset());
   initialized = true;
 }
 
+function handleWordTyped(
+  word: string,
+  isCorrect: boolean,
+  burst: number,
+  currentWordElement: JQuery<HTMLElement>
+): void {
+  console.log({ word, isCorrect, burst });
+  if (!isCorrect) {
+    return;
+  }
+  const wordElement = currentWordElement[0];
+  if (burst > getTargetSpeed()) {
+    animate(wordElement, "tbdBeaten");
+  } else {
+    animate(wordElement, "tbdLost");
+  }
+}
+
 function initSorter(): void {
+  //console.log("initSorter(): ");
   [...document.querySelectorAll("#tbdModeSorterSelect option")].forEach(
     (option) => {
       if (!(option instanceof HTMLOptionElement)) {
@@ -121,11 +161,41 @@ function initSorter(): void {
     ?.addEventListener("change", (event: Event) => {
       // @ts-ignore
       configSet("sorter", event?.target?.value);
-      updateUiWords();
+      triggerUpdateUiWords();
     });
 }
+function handleResetStatsClick(event: MouseEvent): void {
+  // console.log("handleResetStatsClick(event: ");
+  const target = event.target;
+  if (!(target instanceof HTMLDivElement)) {
+    return;
+  }
+  if (!target.classList.contains("tbdWord")) {
+    return;
+  }
+  // @ts-ignore
+  const word = target.parentElement.dataset["word"] || "";
+  if (word == "") {
+    return;
+  }
+  if (confirm(`Delete all data for '${word}'?`)) {
+    resetStatsForWord(word);
+  }
+}
+
+function recalculate(): void {
+  //console.log("recalculate(): ");
+  updateMedianSpeedCache();
+  updateWordsetGroups(getMonkeyTypeWordset());
+  resetCurrentGroupThreshold();
+  updateCurrentGroupUnbeatenWordset();
+  updateInfo();
+}
+
+const debouncedRecalculate = debounce(recalculate, 10);
 
 function updateWordInfo(event: MouseEvent): void {
+  // console.log("updateWordInfo(event: ");
   const target = event.target;
   if (!(target instanceof HTMLElement)) {
     return;
@@ -133,7 +203,7 @@ function updateWordInfo(event: MouseEvent): void {
   if (!target.classList.contains("tbdWord")) {
     return;
   }
-  const word = target.dataset["word"];
+  const word = target.parentElement?.dataset["word"];
   if (word == undefined) {
     return;
   }
@@ -153,67 +223,180 @@ function updateWordInfo(event: MouseEvent): void {
         <dd>Mean: ${getMeanSpeedForWord(word)}</dd>
         <dd>Median: ${getMedianSpeedForWord(word)}</dd>
         <dd>Fastest: ${getFastestSpeedForWord(word)}</dd>
-      </dl>`.trim()
+      </dl>
+      <span>click word to reset data</span>
+    `.trim()
     );
-    getWordElement(word).append($wordInfo);
-    $wordInfo.show(400);
+    getWordElement(word).append($wordInfo[0]);
+    $wordInfo.show(200);
   } else {
     $wordInfo.hide();
   }
 }
 
-export function getWord(): string {
-  return getModifiedWordset().randomWord();
+export function getWord(
+  retrievedWordset: Wordset,
+  originalWord: string
+): string {
+  //console.log("getWord(retrievedWordset: ");
+  handleWordsetForNextWord(retrievedWordset);
+  const tbdModeWordset = getCurrentGroupUnbeatenWordset();
+  if (tbdModeWordset.length == 0) {
+    return originalWord;
+  }
+  const random = Math.random() * 100;
+  if (random < 50) {
+    return getCurrentWordsetGroup().randomWord();
+  } else {
+    return tbdModeWordset.randomWord();
+  }
 }
 
-function handleWordsetUpdate(wordset: Wordset): void {
-  if (wordset.words.join("$") !== originalWordset.words.join("$")) {
-    handleWordsetChanged(wordset);
+function handleWordsetForNextWord(retrievedWordset: Wordset): void {
+  // console.log("handleWordsetForNextWord(retrievedWordset: ");
+  if (
+    retrievedWordset.length != getMonkeyTypeWordset().length &&
+    retrievedWordset.words.join("$") !== getMonkeyTypeWordset().words.join("$")
+  ) {
+    handleWordsetChanged(retrievedWordset);
   }
+}
+
+let tbdModeWordsetGroups: Array<Wordset> = [];
+
+function getWordsetGroups(): Array<Wordset> {
+  return tbdModeWordsetGroups;
+}
+
+function updateWordsetGroups(newWordset: Wordset): void {
+  tbdModeWordsetGroups = [];
+  const notPastTarget = newWordset.words.filter(
+    (word) => !hasWordBeenBeaten(word, getTargetSpeed())
+  );
+  const uniqueWords = new Set(notPastTarget);
+  const randomlySorted = Array.from(uniqueWords).sort(randomSorter);
+
+  // This is an effort to ensure there are no tiny group sizes, like if there are 200
+  // words and a group size of 18. Creating groups of size 18 would mean getting 11 groups
+  // of 18 and 1 group of 2. This method ends up creating 8 groups of 17 (136) + 4 groups of
+  // 16 (64). I'm sure there is a better way to calculate it but this seems to work and I'm
+  // lazy when it comes to math.
+  const desiredGroupSize = getGroupSize();
+  const totalUniqueWords = uniqueWords.size;
+  const actualGroupCount = Math.ceil(totalUniqueWords / desiredGroupSize);
+  const maxGroupSize = Math.ceil(totalUniqueWords / actualGroupCount);
+  const reducedGroupSize = maxGroupSize - 1;
+  const sizes = [];
+  let remainingWords = totalUniqueWords;
+  for (let i = 0; i < actualGroupCount; i++) {
+    if (remainingWords % maxGroupSize == 0) {
+      sizes.push(maxGroupSize);
+      remainingWords -= maxGroupSize;
+    } else {
+      sizes.push(reducedGroupSize);
+      remainingWords -= reducedGroupSize;
+    }
+  }
+  let start = 0;
+  sizes.forEach((size) => {
+    const words = randomlySorted.slice(start, start + size);
+    tbdModeWordsetGroups.push(new Wordset(words));
+    start = start + size;
+  });
+
+  console.log({ tbdModeWordsetGroups });
+  currentWordsetGroup = tbdModeWordsetGroups[0];
 }
 
 function handleWordsetChanged(newWordset: Wordset): void {
-  updateCurrentWordset(newWordset);
-  updateModifiedWordset(getNextWordset());
-  resetThreshold();
-  getNextWordset();
-  updateInfo();
+  updateMonkeyTypeWordset(newWordset);
+  recalculate();
 }
 
-function updateCurrentWordset(wordset: Wordset): void {
-  console.log("updateCurrentWordset");
-  originalWordset = wordset;
+function updateMonkeyTypeWordset(wordset: Wordset): void {
+  // console.log("updateCurrentWordset(wordset: ");
+  monkeyTypeWordset = wordset;
 }
 
-function getCurrentWordset(): Wordset {
-  return originalWordset;
+function getMonkeyTypeWordset(): Wordset {
+  //console.log("getCurrentWordset(): ");
+  return monkeyTypeWordset;
 }
 
-function updateModifiedWordset(wordset: Wordset): void {
-  console.log("updateCurrentWordset");
-  modifiedWordset = wordset;
+let currentWordsetGroup: Wordset;
+
+function getCurrentWordsetGroup(): Wordset {
+  return currentWordsetGroup || getMonkeyTypeWordset();
 }
 
-function getModifiedWordset(): Wordset {
-  return modifiedWordset;
-}
-
-function getUnbeatenWordset(): Wordset {
-  let unbeatenWordset = new Wordset([]);
-  const currentWordset = getCurrentWordset();
-  if (currentWordset) {
-    const unbeatenWords = currentWordset.words.filter((word) => {
-      return !hasWordBeenBeaten(word);
-    });
-    unbeatenWordset = new Wordset(unbeatenWords);
+function updateCurrentWordsetGroup(): void {
+  if (isWordsetComplete(getCurrentWordsetGroup())) {
+    resetCurrentGroupThreshold();
+    currentWordsetGroup = getNextIncompleteWordsetGroup();
+    console.log({ currentWordsetGroup });
   }
-  return unbeatenWordset;
+}
+
+function isWordsetComplete(wordset: Wordset): boolean {
+  return wordset.words.every((word) =>
+    hasWordBeenBeaten(word, getTargetSpeed())
+  );
+}
+
+function getNextIncompleteWordsetGroup(): Wordset {
+  const groups = getWordsetGroups();
+  const firstIncomplete = groups.find((wordset) => {
+    return !isWordsetComplete(wordset);
+  });
+
+  if (firstIncomplete != undefined) {
+    return firstIncomplete;
+  }
+
+  return getMonkeyTypeWordset();
+}
+
+function updateCurrentGroupUnbeatenWordset(): void {
+  updateCurrentWordsetGroup();
+  const currentWordsetGroup = getCurrentWordsetGroup();
+  let nextWordset = getUnbeatenWordset(
+    currentWordsetGroup,
+    getCurrentGroupThreshold()
+  );
+  while (nextWordset.length < 1) {
+    bumpCurrentGroupThreshold();
+    nextWordset = getUnbeatenWordset(
+      currentWordsetGroup,
+      getCurrentGroupThreshold()
+    );
+  }
+  currentGroupUnbeatenWordset = nextWordset;
+}
+
+function getCurrentGroupUnbeatenWordset(): Wordset {
+  //console.log("getModifiedWordset(): ");
+  return currentGroupUnbeatenWordset;
+}
+
+function getUnbeatenWords(wordset: Wordset, atThreshold?: number): Set<string> {
+  // console.log("getUnbeatenWordset(): ");
+  const unbeatenWords = new Set(wordset.words);
+  if (unbeatenWords.size > 0) {
+    unbeatenWords.forEach((word) => {
+      if (hasWordBeenBeaten(word, atThreshold)) {
+        unbeatenWords.delete(word);
+      }
+    });
+  }
+
+  return unbeatenWords;
 }
 
 function funboxChangeHandler(
   key: string,
   funbox?: MonkeyTypes.ConfigValues
 ): void {
+  //console.log("funboxChangeHandler(key: ");
   if (key != "funbox") {
     return;
   }
@@ -225,6 +408,7 @@ function funboxChangeHandler(
 }
 
 function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
+  // console.log("pageChangeHandler(_previousPage: ");
   if (Config.funbox !== "tbdmode") {
     return;
   }
@@ -239,8 +423,9 @@ function pageChangeHandler(_previousPage: Page, nextPage: Page): void {
 let tbdModeData: TbdModeData;
 
 function getTbdModeData(): TbdModeData {
+  //console.log("getTbdModeData(): ");
   if (tbdModeData) {
-    return <TbdModeData>tbdModeData;
+    return tbdModeData;
   }
   tbdModeData = { words: {}, config: {} };
 
@@ -263,11 +448,13 @@ function getTbdModeData(): TbdModeData {
 }
 
 function updateTbdModeData(data: TbdModeData): void {
+  // console.log("updateTbdModeData(data: ");
   tbdModeData = data;
   localStorageUpdater(data);
 }
 
 function getDataForWord(word: string): TbdWordData {
+  //console.log("getDataForWord(word: ");
   const data = getTbdModeData();
   if (!data.words[word]) {
     return { speeds: [], missedCount: 0 };
@@ -276,10 +463,12 @@ function getDataForWord(word: string): TbdWordData {
 }
 
 function getSpeedsForWord(word: string): Array<number> {
-  return getDataForWord(word).speeds;
+  // console.log("getSpeedsForWord(word: ");
+  return getDataForWord(word).speeds || [];
 }
 
 function getSlowestSpeedForWord(word: string): number {
+  //console.log("getSlowestSpeedForWord(word: ");
   const speeds = getSpeedsForWord(word);
   if (speeds.length == 0) {
     return 0;
@@ -289,6 +478,7 @@ function getSlowestSpeedForWord(word: string): number {
 }
 
 function getFastestSpeedForWord(word: string): number {
+  // console.log("getFastestSpeedForWord(word: ");
   const speeds = getSpeedsForWord(word);
   if (speeds.length == 0) {
     return 0;
@@ -298,18 +488,25 @@ function getFastestSpeedForWord(word: string): number {
 }
 
 function getMistypedCountForWord(word: string): number {
+  //console.log("getMistypedCountForWord(word: ");
   return getDataForWord(word).missedCount;
 }
 
 function getMedianSpeedForWord(word: string): number {
-  const speeds = getSpeedsForWord(word);
-  if (speeds.length == 0) {
+  // console.log("getMedianSpeedForWord(word: ");
+  return medianSpeeds[word] || 0;
+}
+
+function calculateMedianSpeedForWord(word: string): number {
+  const wordSpeeds = getSpeedsForWord(word);
+  if (wordSpeeds.length < 1) {
     return 0;
   }
-  return median(speeds);
+  return median(wordSpeeds);
 }
 
 function getMeanSpeedForWord(word: string): number {
+  //console.log("getMeanSpeedForWord(word: ");
   const speeds = getSpeedsForWord(word);
   if (speeds.length == 0) {
     return 0;
@@ -318,68 +515,58 @@ function getMeanSpeedForWord(word: string): number {
 }
 
 const localStorageUpdater = debounce((data: TbdWordData) => {
+  // console.log("debounced localStorageUpdater called");
   localStorage.setItem("tbdModeData", JSON.stringify(data));
 }, 1000);
 
 function saveWordData(word: string, wordData: TbdWordData): void {
+  //console.log("saveWordData(word: ");
   const data = getTbdModeData();
   data.words[word] = wordData;
   updateTbdModeData(data);
+  medianSpeeds[word] = calculateMedianSpeedForWord(word);
 }
 
 export function addBurst(word: string, speed: number): void {
-  console.log("addBurst");
+  // console.log("addBurst");
   const wordData = getDataForWord(word);
   wordData.speeds.push(speed);
   saveWordData(word, wordData);
 }
 
-export function getNextWordset(): Wordset {
-  console.log("getNextWordset");
-  const unbeatenWordset = getUnbeatenWordset();
-  const originalWordset = getCurrentWordset();
-  const originalUniqueWordset = new Wordset([
-    ...new Set(originalWordset.words),
-  ]);
-  const minimumNewWordsPerLevel = Math.min(originalUniqueWordset.length, 2);
-  if (unbeatenWordset.length < minimumNewWordsPerLevel) {
-    bumpThreshold();
-    return getNextWordset();
+export function getUnbeatenWordset(
+  sourceWordset: Wordset,
+  atThreshold?: number
+): Wordset {
+  //console.log("getNextWordset");
+  if (sourceWordset.length == 0) {
+    return sourceWordset;
   }
-
-  // Add some random words just for fun
-  const minWordsPerLevel = Math.min(3, originalUniqueWordset.length);
-  if (unbeatenWordset.length >= minWordsPerLevel) {
-    return unbeatenWordset;
-  } else {
-    const newWords: string[] = Array.from(unbeatenWordset.words);
-    do {
-      const newWord = originalUniqueWordset.randomWord();
-      if (!newWords.includes(newWord)) {
-        newWords.push(newWord);
-      }
-    } while (newWords.length < minWordsPerLevel);
-    return new Wordset(newWords);
-  }
+  const unbeatenWords = getUnbeatenWords(sourceWordset, atThreshold);
+  return new Wordset(Array.from(unbeatenWords));
 }
 
-function hasWordBeenBeaten(word: string): boolean {
-  const speeds = getSpeedsForWord(word);
-  if (speeds.length == 0) {
-    return false;
+function hasWordBeenBeaten(word: string, atThreshold?: number): boolean {
+  // console.log("hasWordBeenBeaten(word: ");
+  if (!atThreshold) {
+    atThreshold = getCurrentGroupThreshold();
   }
-  return median(speeds) > threshold;
+  return getMedianSpeedForWord(word) > atThreshold;
 }
 
-function bumpThreshold(): void {
-  threshold += thresholdStepSize;
+function bumpCurrentGroupThreshold(): void {
+  //console.log("bumpThreshold(): ");
+  const newThreshold = currentGroupThreshold + groupThresholdStepSize;
+  setCurrentGroupThreshold(newThreshold);
 }
 
 function isTbdMode(): boolean {
+  // console.log("isTbdMode(): ");
   return Config.funbox == "tbdmode";
 }
 
 function toggleUI(): void {
+  //console.log("toggleUI(): ");
   if (isTbdMode()) {
     $tbdModeInfo.removeClass("hidden");
   } else {
@@ -388,6 +575,7 @@ function toggleUI(): void {
 }
 
 function saveBurstsFromLatestResults(): void {
+  // console.log("saveBurstsFromLatestResults(): ");
   const resultWords = TestInput.input.history;
   const resultBursts = TestInput.burstHistory;
 
@@ -398,99 +586,175 @@ function saveBurstsFromLatestResults(): void {
   }
 }
 
-function updateProgressMeter(): void {
+function updateTotalProgressMeter(): void {
+  //console.log("updateProgressMeter(): ");
   const targetSpeed = getTargetSpeed();
-  const allWords = getCurrentWordset();
+  const allWords = getMonkeyTypeWordset();
   const count = allWords.length;
-  const beatenAtTargetCount = allWords.words.filter(
-    (word) => getMedianSpeedForWord(word) > targetSpeed
-  ).length;
+  const beatenAtTargetCount = allWords.words.filter((word: string) => {
+    return hasWordBeenBeaten(word, targetSpeed);
+  }).length;
   const percent = (beatenAtTargetCount / count) * 100 || 0;
-  $progressMeter.css("width", `${percent}%`);
+  $progressMeterTotal.css("width", `${percent}%`);
+  $progressMeterTotal.attr(
+    "title",
+    `${beatenAtTargetCount} words of ${count} total have been typed faster than the target of ${targetSpeed}`
+  );
+}
+
+function updateGroupProgressMeter(): void {
+  const targetSpeed = getTargetSpeed();
+  const group = getCurrentWordsetGroup();
+  const beatenAtTargetCount = group.words.filter((word: string) => {
+    return hasWordBeenBeaten(word, targetSpeed);
+  }).length;
+  const percent = (beatenAtTargetCount / group.length) * 100 || 0;
+  $progressMeterGroup.css("width", `${percent}%`);
+  $progressMeterGroup.attr(
+    "title",
+    `${beatenAtTargetCount} words of ${group.length} in the current group have been typed faster than the target of ${targetSpeed}`
+  );
 }
 
 export function updateInfo(): void {
-  updateUiWords();
-  updateProgressMeter();
-  $currentThreshold.text(threshold);
+  // console.log("updateInfo(): ");
+  triggerUpdateUiWords();
+  updateTotalProgressMeter();
+  updateGroupProgressMeter();
   $targetThreshold.text(configGet("targetSpeed"));
+  $groupThreshold.text(getCurrentGroupThreshold());
 }
 
-function updateUiWords(): void {
-  const currentWordset = getCurrentWordset();
-  [...document.querySelectorAll(".tbdWord")].forEach((wordElement) => {
-    // @ts-ignore
-    const word = wordElement.dataset.word;
-    if (!currentWordset.words.includes(word)) {
-      // @ts-ignore
-      wordElement.parentElement.removeChild(wordElement);
-    }
+function updateMedianSpeedCache(): void {
+  //console.log("updateAllMedianSpeeds(): ");
+  const allTypedWords = getTbdModeData().words;
+  Object.keys(allTypedWords).forEach((word: string) => {
+    medianSpeeds[word] = calculateMedianSpeedForWord(word);
   });
-  currentWordset.words.sort(getSorter()).forEach((word) => {
-    const wordElement = getWordElement(word);
-    const wordData = getDataForWord(word);
-    $wordsDiv.append(wordElement);
-    setTimeout(() => {
-      const beaten = hasWordBeenBeaten(word);
-      const randomTime = Math.round(Math.random() * 300);
-      if (beaten && wordElement.attr("data-beaten") == "0") {
-        setTimeout(() => {
-          animate(wordElement[0], "tbdBeaten");
-        }, randomTime);
-      }
-      if (!beaten && wordElement.attr("data-beaten") == "1") {
-        setTimeout(() => {
-          animate(wordElement[0], "tbdLost");
-        }, randomTime);
-      }
+}
 
-      wordElement.attr("data-beaten", beaten ? "1" : "0");
-      wordElement.attr("data-count", wordData.speeds.length);
-      wordElement.attr("data-missed", wordData.missedCount);
+const triggerUpdateUiWords = debounce((): void => {
+  // console.log("triggerUpdateUiWords(): ");
+  const start = Date.now();
+  updateUiWords().then(() => {
+    const duration = Date.now() - start;
+    console.log(`UI Words Updated in ${duration}ms`);
+  });
+}, 25);
+
+async function updateUiWords(): Promise<void> {
+  //console.log("updateUiWords(): ");
+  // avoid redraws for every change
+  $wordsDiv.hide();
+  const currentGroup = getCurrentWordsetGroup();
+  [...document.querySelectorAll(".tbdWordContainer")]?.forEach(
+    (wordElement) => {
+      // @ts-ignore
+      const word = wordElement.dataset["word"];
+      if (!currentGroup.words.includes(word)) {
+        // @ts-ignore
+        wordElement.parentElement.removeChild(wordElement);
+      }
+    }
+  );
+  currentGroup.words.sort(getSorter()).forEach((word) => {
+    const wordElement = getWordElement(word);
+    $wordsDiv.append(wordElement);
+    // Timeout ensures transitions work
+    setTimeout(() => {
+      wordElement.dataset["beatenAtTarget"] = hasWordBeenBeaten(
+        word,
+        getTargetSpeed()
+      )
+        ? "1"
+        : "0";
+      wordElement.dataset["beatenAtGroup"] = hasWordBeenBeaten(
+        word,
+        getCurrentGroupThreshold()
+      )
+        ? "1"
+        : "0";
+      const percentComplete = getMedianSpeedForWord(word) / getTargetSpeed();
+      const modifier = Math.min(percentComplete, 1);
+
+      const baseScale = 0.75;
+      const additional = (1 - baseScale) * modifier;
+      // @ts-ignore
+      wordElement.querySelector("div").style?.transform = `scale(${
+        baseScale + additional
+      })`;
     }, 0);
   });
+  $wordsDiv.show();
 }
 
-function getWordElement(word: string): JQuery<HTMLElement> {
-  const element = $(`.tbdWord[data-word="${word}"]`);
-  if (element.length == 0) {
-    return $(`<div class="tbdWord" data-word="${word}">${word}</div>`);
+function getWordElement(word: string): HTMLDivElement {
+  //console.log("getWordElement(word: ");
+  const query = `.tbdWordContainer[data-word="${word}"]`;
+  const element = document.querySelector(query);
+  if (!(element instanceof HTMLDivElement)) {
+    const newDiv = document.createElement("div");
+    newDiv.innerHTML = `<div class="tbdWord">${word}</div>`;
+    newDiv.dataset["word"] = word;
+    newDiv.classList.add("tbdWordContainer");
+    return newDiv;
   }
   return element;
 }
 
-export function resetThreshold(): void {
-  const currentWords = getCurrentWordset().words;
-  if (currentWords.some((word: string) => getSpeedsForWord(word).length == 0)) {
-    threshold = 1;
+function setCurrentGroupThreshold(newThreshold: number): void {
+  //console.log("setThreshold(newThreshold: ");
+  if (currentGroupThreshold == newThreshold) {
     return;
   }
-  const medians = currentWords.map((word: string) =>
-    median(getSpeedsForWord(word))
-  );
-  threshold = Math.min(...medians);
+  currentGroupThreshold = newThreshold;
 }
 
-function animate(
-  element: HTMLElement,
-  animationClass: string,
-  animationName?: string
-): void {
-  if (animationName == null) {
-    animationName = animationClass;
+function getCurrentGroupThreshold(): number {
+  //console.log("getCurrentThreshold(): ");
+  return currentGroupThreshold;
+}
+
+export function resetCurrentGroupThreshold(): void {
+  //console.log("resetThreshold(): ");
+  setCurrentGroupThreshold(1);
+}
+
+/**
+ * @param element
+ * @param animation - both the keyframe animation and class with that animation. For simplicity
+ * they must be the same.
+ * @param delay - The number of MS to delay the animation
+ */
+const currentlyAnimating: Array<HTMLElement> = [];
+function animate(element: HTMLElement, animation: string, delay = 0): void {
+  //console.log("animate()");
+  if (currentlyAnimating.includes(element)) {
+    console.log("No stacked animations");
+    return;
   }
   const callback = (event: AnimationEvent): void => {
-    if (event.animationName !== animationName) {
+    if (event.animationName !== animation) {
       return;
     }
-    element.classList.remove(animationClass);
+    const index = currentlyAnimating.findIndex(
+      (animatingElement) => animatingElement == element
+    );
+    if (index) {
+      delete currentlyAnimating[index];
+    }
+    element.classList.remove(animation);
     element.removeEventListener("animationend", callback);
   };
   element.addEventListener("animationend", callback);
-  element.classList.add(animationClass);
+  setTimeout(() => {
+    currentlyAnimating.push(element);
+    element.classList.add(animation);
+  }, delay);
 }
 
 function getSorter(): WordSorter {
+  //console.log("getSorter(): ");
   switch (configGet("sorter")) {
     case "alphabetical-asc":
       return alphabeticalAscendingSorter;
@@ -508,50 +772,67 @@ function getSorter(): WordSorter {
   return alphabeticalAscendingSorter;
 }
 
+const randomSorter = (_a: any, _b: any): number => {
+  return Math.random() < 0.5 ? -1 : 1;
+};
+
 const alphabeticalDescendingSorter = (word: string, word2: string): number => {
-  return word < word2 ? 1 : -1;
+  //console.log("alphabeticalDescendingSorter ");
+  return word.toLowerCase() < word2.toLowerCase() ? 1 : -1;
 };
 
 const alphabeticalAscendingSorter = (word: string, word2: string): number => {
-  return word < word2 ? -1 : 1;
+  //console.log("alphabeticalAscendingSorter ");
+  return word.toLowerCase() < word2.toLowerCase() ? -1 : 1;
 };
 
 const speedAscendingSorter = (word: string, word2: string): number => {
+  //console.log("speedAscendingSorter ");
   const speed1 = getMedianSpeedForWord(word);
   const speed2 = getMedianSpeedForWord(word2);
   return speed1 - speed2;
 };
 
 const speedDescendingSorter = (word: string, word2: string): number => {
+  //console.log("speedDescendingSorter ");
   const speed1 = getMedianSpeedForWord(word);
   const speed2 = getMedianSpeedForWord(word2);
   return speed2 - speed1;
 };
 
 const typedCountSorter = (word: string, word2: string): number => {
+  //console.log("typedCountSorter ");
   const typed1 = getSpeedsForWord(word).length;
   const typed2 = getSpeedsForWord(word2).length;
   return typed2 - typed1;
 };
 
 const missedCountSorter = (word: string, word2: string): number => {
+  // console.log("missedCountSorter ");
   return getMistypedCountForWord(word2) - getMistypedCountForWord(word);
 };
 
 function configGet(key: string): string {
+  //console.log("configGet(key: ");
   const configData = getTbdModeData().config;
   return configData[key] || "";
 }
 
 // Strings ensure we can store in localStorage
 function configSet(key: string, value: string): void {
+  // console.log("configSet(key: ");
   const data = getTbdModeData();
   data.config[key] = value;
   updateTbdModeData(data);
 }
 
 function getTargetSpeed(): number {
+  //console.log("getTargetSpeed(): ");
   return parseInt(configGet("targetSpeed") || "75");
+}
+
+function getGroupSize(): number {
+  return parseInt(configGet("groupSize") || "30)");
 }
 
 init();

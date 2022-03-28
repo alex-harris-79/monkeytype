@@ -28,6 +28,7 @@ import * as ActivePage from "../states/active-page";
 import * as TestActive from "../states/test-active";
 import * as TestInput from "../test/test-input";
 import * as TestWords from "../test/test-words";
+import * as WordTypedEvent from "../observables/word-typed-event";
 
 let dontInsertSpace = false;
 let correctShiftUsed = true;
@@ -141,6 +142,10 @@ function handleSpace(): void {
   //correct word or in zen mode
   const isWordCorrect =
     currentWord == TestInput.input.current || Config.mode == "zen";
+  const $currentTestWord = $(
+    `#words .word:nth-child(${TestWords.words.currentIndex + 1})`
+  );
+  WordTypedEvent.dispatch(currentWord, isWordCorrect, burst, $currentTestWord);
   MonkeyPower.addPower(isWordCorrect, true);
   TestInput.incrementAccuracy(isWordCorrect);
   if (isWordCorrect) {
