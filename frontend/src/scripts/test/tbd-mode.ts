@@ -92,7 +92,7 @@ class TbdConfig {
   }
 
   getGroupSize(): number {
-    return parseInt(this.get("groupSize", "5"));
+    return parseInt(this.get("groupSize", "30"));
   }
 }
 
@@ -220,6 +220,10 @@ class TbdMode {
       Array.from(uniqueBelowTarget),
       this.config.getGroupSize()
     );
+    TbdEvents.dispatchEvent("nextGroup", {
+      group: this.getCurrentGroup(),
+      targetSpeed: this.config.getTargetSpeed(),
+    });
   }
 
   handleResultsShownEvent(results: UpdateData): void {
@@ -378,9 +382,7 @@ class TbdUI {
     });
     this.sorterSelect.addEventListener("change", (event) => {
       // @ts-ignore
-      TbdEvents.dispatchEvent("sorterSelectChanged", {
-        value: event.target.value,
-      });
+      TbdEvents.dispatchEvent("sorterSelectChanged", {value: event.target.value});
       // @ts-ignore
       this.sortWords(TbdSorting.getSorter(event.target.value));
     });
@@ -393,6 +395,14 @@ class TbdUI {
     });
     TbdEvents.addSubscriber("configInitialized", (config) => {
       this.$targetThreshold.text(config["targetSpeed"]);
+    });
+    TbdEvents.addSubscriber("nextGroup", (data) => {
+      const group = data["group"];
+      this.updateUiWords(
+        group.getWordset().words,
+        group.getThreshold(),
+        data["targetSpeed"]
+      );
     });
   }
 
