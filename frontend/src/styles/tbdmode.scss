@@ -24,6 +24,7 @@
     .progressMeterGroup {
       width: 0;
       transition: width 1s ease-in-out;
+      position: relative; // For the ::before below
     }
 
     .progressMeterTotal {
@@ -32,8 +33,17 @@
     }
 
     .progressMeterGroup {
-      height: 0.5rem;
-      background-color: var(--colorful-error-extra-color);
+      height: 0.65rem;
+      &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background-color: var(--main-color);
+        opacity: 0.75;
+      }
     }
   }
 
