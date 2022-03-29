@@ -23,12 +23,21 @@ function isTbdMode(): boolean {
 class TbdConfig {
   init(): void {
     WordTypedEvent.subscribe(this.handleWordTyped.bind(this));
-    TbdEvents.addSubscriber(
-      "setTargetButtonClicked",
-      this.updateTargetSpeed.bind(this)
-    );
     TbdEvents.addSubscriber("sorterSelectChanged", (data) => {
       this.set("sorter", data["value"]);
+    });
+    TbdEvents.addSubscriber("configUpdateRequested", (data) => {
+      switch (data["configSetting"]) {
+        case "targetSpeed":
+          this.processTargetSpeedUpdate();
+          break;
+        case "groupSize":
+          this.processGroupSizeUpdate();
+          break;
+        case "animations":
+          this.processAnimationToggle();
+          break;
+      }
     });
   }
 
@@ -69,13 +78,6 @@ class TbdConfig {
     });
   }
 
-  updateTargetSpeed(): void {
-    const newTarget = parseInt(prompt("New target speed") || "");
-    if (newTarget > 0) {
-      this.set("targetSpeed", newTarget.toString());
-    }
-  }
-
   getSorterName(): string {
     return this.get("sorter", "alphabetical-asc");
   }
@@ -86,6 +88,33 @@ class TbdConfig {
 
   getGroupSize(): number {
     return parseInt(this.get("groupSize", "30"));
+  }
+
+  processTargetSpeedUpdate(): void {
+    const newSpeed = parseInt(prompt("New target speed") || "");
+    if (newSpeed > 0) {
+      this.set("targetSpeed", newSpeed.toString());
+    }
+  }
+
+  processAnimationToggle(): void {
+    const enabled = confirm("Confirm to enable, cancel to disable.");
+    if (enabled) {
+      this.set("animationsEnabled", "1");
+    } else {
+      this.set("animationsEnabled", "0");
+    }
+  }
+
+  areAnimationsEnabled(): boolean {
+    return this.get("animationsEnabled") == "1";
+  }
+
+  processGroupSizeUpdate(): void {
+    const newSize = parseInt(prompt("New group size") || "");
+    if (newSize > 0) {
+      this.set("groupSize", newSize.toString());
+    }
   }
 }
 
@@ -174,6 +203,66 @@ class TbdMode {
     TbdEvents.addSubscriber("targetSpeed-changed", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
+    TbdEvents.addSubscriber("groupSize-changed", () => {
+      this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
+    });
+    TbdEvents.addSubscriber("wordsReset", () => {
+      this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
+    });
+
+    TbdEvents.addSubscriber("actionButtonClicked", (data) => {
+      switch (data["actionValue"]) {
+        case "resetCurrentWords":
+          this.handleResetCurrentWordsRequest();
+          break;
+        case "resetAllWords":
+          this.handleResetAllWordsRequest();
+          break;
+        case "copyAllData":
+          this.handleCopyDataRequest();
+          break;
+        case "importData":
+          this.handleImportDataRequest();
+          break;
+      }
+    });
+  }
+
+  handleResetCurrentWordsRequest(): void {
+    if (
+      confirm(
+        "Are you sure you want to reset data for the current wordset? This includes all" +
+          " words in the language or custom word set you are using, not just the current group!"
+      )
+    ) {
+      TbdData.resetDataForWords(this.monkeyTypeWordset.words);
+    }
+  }
+
+  handleCopyDataRequest(): void {
+    navigator.clipboard.writeText(JSON.stringify(TbdData.getAll())).then(
+      () => {
+        alert("JSON copied to your clipboard");
+      },
+      () => {
+        alert("There was a problem copying the data to your clipboard");
+      }
+    );
+  }
+
+  handleImportDataRequest(): void {
+    const exportJson =
+      prompt("Enter the JSON you got from an export here") || "";
+    if (exportJson == "") {
+      return;
+    }
+    const parsed = JSON.parse(exportJson);
+    if ("words" in parsed && "config" in parsed) {
+      TbdData.updateData(parsed, true);
+      location.reload();
+    } else {
+      alert("There was something wrong with your JSON, sorry!");
+    }
   }
 
   getConfig(): TbdConfig {
@@ -283,6 +372,44 @@ class TbdMode {
       TbdData.addToMissedCount(word, missedCount);
     });
   }
+
+  handleResetAllWordsRequest(): void {
+    let confirmationWord = "delete";
+    let slowestSpeed = 1000;
+    const allData = TbdData.getAll();
+    Object.keys(allData.words)
+      .filter((word: string) => TbdData.getMedianSpeedForWord(word) > 0)
+      .forEach((word: string) => {
+        const median = TbdData.getMedianSpeedForWord(word);
+        if (
+          median > 0 &&
+          median < slowestSpeed &&
+          word.length >= confirmationWord.length
+        ) {
+          confirmationWord = word;
+          slowestSpeed = median;
+        }
+      });
+    const confirmationString = `${confirmationWord} ${confirmationWord} ${confirmationWord}`;
+    const response = prompt(
+      `This will delete ALL your word data. To confirm, type: ${confirmationString}`
+    );
+    if (response == "") {
+      return;
+    }
+    if (response == confirmationString) {
+      allData.words = {};
+      TbdData.updateData(allData, true);
+      TbdEvents.dispatchEvent("wordsReset");
+      alert(
+        "Ok! Your data has been deleted and you're starting over from scratch."
+      );
+    } else {
+      alert(
+        `Good effort, but you typed '${response}' instead of '${confirmationString}'. No reset for you!`
+      );
+    }
+  }
 }
 
 class TbdUI {
@@ -304,9 +431,21 @@ class TbdUI {
   private $tbdBeatenExample: JQuery<HTMLElement> = $(".tbdBeatenExample");
   private $tbdLostExample: JQuery<HTMLElement> = $(".tbdLostExample");
 
+  private $tbdModeActionsSelect: JQuery<HTMLSelectElement> = $(
+    "#tbdModeActionsSelect"
+  );
+  private $tbdModeActionsButton: JQuery<HTMLElement> = $(
+    "#tbdModeActionButton"
+  );
+
+  private $tbdModeConfigSettingsSelect: JQuery<HTMLElement> = $(
+    "#tbdModeConfigSettings"
+  );
+  private $tbdModeConfigSettingsUpdateButton: JQuery<HTMLElement> = $(
+    "#tbdModeUpdateConfigSettingsUpdateButton"
+  );
+
   private wordsContainer: HTMLDivElement;
-  private resetWordsButton: HTMLDivElement;
-  private setTargetButton: HTMLDivElement;
   private sorterSelect: HTMLSelectElement;
   private tbdMode: TbdMode;
 
@@ -318,18 +457,6 @@ class TbdUI {
       throw new Error("Could not locate TBD words container");
     }
     this.wordsContainer = wordsContainer;
-
-    const resetWordsButton = document.getElementById("tbdModeResetButton");
-    if (!(resetWordsButton instanceof HTMLDivElement)) {
-      throw new Error("Could not locate reset words button");
-    }
-    this.resetWordsButton = resetWordsButton;
-
-    const setTargetButton = document.getElementById("tbdModeSetTargetButton");
-    if (!(setTargetButton instanceof HTMLDivElement)) {
-      throw new Error("Could not locate set target button");
-    }
-    this.setTargetButton = setTargetButton;
 
     const sorterSelect = document.getElementById("tbdModeSorterSelect");
     if (!(sorterSelect instanceof HTMLSelectElement)) {
@@ -355,9 +482,6 @@ class TbdUI {
     );
     this.wordsContainer.addEventListener("mouseleave", () => {
       return this.$wordInfo.hide(0);
-    });
-    this.setTargetButton.addEventListener("click", () => {
-      TbdEvents.dispatchEvent("setTargetButtonClicked");
     });
     TbdEvents.addSubscriber("wordTypedCorrectly", (data: SomeJson) => {
       this.animate(data["wordElement"], "tbdBeaten");
@@ -399,12 +523,14 @@ class TbdUI {
       "sorter-changed",
       this.handleSorterChange.bind(this)
     );
-    this.resetWordsButton.addEventListener("click", () => {
-      TbdEvents.dispatchEvent("resetButtonClicked");
-    });
     TbdEvents.addSubscriber("nextGroup", (data) => {
       const group = data["group"];
       this.updateUiWords(group.getWordset().words);
+      const sorter = TbdSorting.getSorter(
+        this.tbdMode.getConfig().getSorterName()
+      );
+      // Give the UI a chance to update before sorting
+      setTimeout(() => this.sortWords(sorter), 50);
     });
     this.$tbdModeHelpButton.on("click", () => {
       this.$tbdModeHelp.toggle(250);
@@ -419,6 +545,28 @@ class TbdUI {
 
     this.$targetThreshold.text(this.tbdMode.getConfig().getTargetSpeed());
     this.$groupThreshold.text(this.tbdMode.getCurrentGroup().getThreshold());
+
+    this.$tbdModeConfigSettingsUpdateButton.on("click", () => {
+      const selectValue = this.$tbdModeConfigSettingsSelect.val();
+      if (selectValue == "") {
+        alert("Select an option from the dropdown first");
+      } else {
+        TbdEvents.dispatchEvent("configUpdateRequested", {
+          configSetting: selectValue,
+        });
+      }
+    });
+
+    this.$tbdModeActionsButton.on("click", () => {
+      const selectValue = this.$tbdModeActionsSelect.val();
+      if (selectValue == "") {
+        alert("Select an option from the dropdown first");
+      } else {
+        TbdEvents.dispatchEvent("actionButtonClicked", {
+          actionValue: selectValue,
+        });
+      }
+    });
   }
 
   private currentlyAnimating: Array<HTMLElement> = [];
@@ -429,6 +577,9 @@ class TbdUI {
    * they must be the same.
    */
   animate(element: HTMLElement, animation: string): void {
+    if (!this.tbdMode.getConfig().areAnimationsEnabled()) {
+      return;
+    }
     if (this.currentlyAnimating.includes(element)) {
       return;
     }
@@ -716,12 +867,14 @@ class TbdData {
   private static localStorageKey = "tbdModeData";
   private static data: TbdDataType;
 
-  private static updateLocalStorage: (data: TbdDataType) => void = debounce(
-    (data: TbdDataType) => {
-      localStorage.setItem(TbdData.localStorageKey, JSON.stringify(data));
-    },
+  private static debouncedUpdateLocalStorage = debounce(
+    TbdData.updateLocalStorage,
     1000
   );
+
+  private static updateLocalStorage(data: TbdDataType): void {
+    localStorage.setItem(TbdData.localStorageKey, JSON.stringify(data));
+  }
 
   static getAll(): TbdDataType {
     if (TbdData.data) {
@@ -747,9 +900,13 @@ class TbdData {
     return defaultValue;
   }
 
-  static updateData(data: TbdDataType): void {
+  static updateData(data: TbdDataType, immediately = false): void {
     TbdData.data = data;
-    TbdData.updateLocalStorage(data);
+    if (immediately) {
+      TbdData.updateLocalStorage(data);
+    } else {
+      TbdData.debouncedUpdateLocalStorage(data);
+    }
   }
 
   static getDataForWord(word: string): TbdWordData {
@@ -762,11 +919,11 @@ class TbdData {
 
   static resetDataForWord(word: string): void {
     TbdData.saveWordData(word, { speeds: [], missedCount: 0 });
-    TbdEvents.dispatchEvent("wordReset", { word: word });
   }
 
   static resetDataForWords(words: Array<string>): void {
     words.forEach((word) => TbdData.resetDataForWord(word));
+    TbdEvents.dispatchEvent("wordsReset");
   }
 
   static hasWordBeenTypedFasterThan(word: string, threshold: number): boolean {

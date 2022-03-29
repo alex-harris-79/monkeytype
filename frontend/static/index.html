@@ -4890,11 +4890,27 @@
             ></div>
           </div>
           <div id="tbdModeControls" class="tbdmode controls">
-            <div class="text-button" id="tbdModeResetButton">Reset Stats</div>
-            <div class="spacer">|</div>
-            <div class="text-button" id="tbdModeSetTargetButton">
-              Set Target Speed
+            <select id="tbdModeConfigSettings">
+              <option value="">-- Config Options --</option>
+              <option value="targetSpeed">Target Speed</option>
+              <option value="groupSize">Group Size</option>
+              <option value="animations">Animations On/Off</option>
+            </select>
+            <div
+              class="text-button"
+              id="tbdModeUpdateConfigSettingsUpdateButton"
+            >
+              Update
             </div>
+            <div class="spacer">|</div>
+            <select id="tbdModeActionsSelect">
+              <option value="">-- Actions --</option>
+              <option value="resetCurrentWords">Reset Current Words</option>
+              <option value="resetAllWords">Reset ALL Words</option>
+              <option value="copyAllData">Copy Data to Clipboard</option>
+              <option value="importData">Import Data</option>
+            </select>
+            <div class="text-button" id="tbdModeActionButton">Go</div>
             <div class="spacer">|</div>
             <span>Sort By</span>
             <select id="tbdModeSorterSelect">
