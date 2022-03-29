@@ -178,10 +178,13 @@ class TbdMode {
       this.resetCurrentWords.bind(this)
     );
     TbdEvents.addSubscriber("wordClicked", this.resetWord.bind(this));
+    TbdEvents.addSubscriber("targetSpeed-changed", () => {
+      this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
+    });
   }
 
-  getWord(retrievedWordset: Wordset): string {
-    this.handleWordsetForNextWord(retrievedWordset);
+  getWord(originalWordset: Wordset): string {
+    this.handleWordsetForNextWord(originalWordset);
     const group = this.getCurrentGroup();
     const random = Math.random() * 100;
     if (random < 60 && group.getUnbeatenWordset().length > 0) {
@@ -209,6 +212,10 @@ class TbdMode {
 
   handleNewWordset(wordset: Wordset): void {
     this.monkeyTypeWordset = wordset;
+    this.regenerateGroupsFromWordset(wordset);
+  }
+
+  regenerateGroupsFromWordset(wordset: Wordset): void {
     const notAboveTargetSpeed = wordset.words.filter((word) => {
       return !TbdData.hasWordBeenTypedFasterThan(
         word,
@@ -381,8 +388,10 @@ class TbdUI {
       this.$groupThreshold.text(data["currentGroup"].getThreshold());
     });
     this.sorterSelect.addEventListener("change", (event) => {
-      // @ts-ignore
-      TbdEvents.dispatchEvent("sorterSelectChanged", {value: event.target.value});
+      TbdEvents.dispatchEvent("sorterSelectChanged", {
+        // @ts-ignore
+        value: event.target.value,
+      });
       // @ts-ignore
       this.sortWords(TbdSorting.getSorter(event.target.value));
     });
@@ -833,6 +842,10 @@ class TbdGroups {
 
   regenerateGroups(words: Array<string>, desiredGroupSize: number): void {
     this.groups = [];
+    if (words.length == 0) {
+      return;
+    }
+
     const randomlySorted = words.sort(TbdSorting.randomSorter);
 
     // This is an effort to ensure there are no tiny group sizes, like if there are 200
