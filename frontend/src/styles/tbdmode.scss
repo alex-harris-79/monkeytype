@@ -1,5 +1,5 @@
 #tbdmodeInfo {
-  height: 40vh;
+  height: 30vh;
   overflow: scroll;
 
   & > * {
@@ -136,11 +136,12 @@
     background-color: var(--bg-color);
     z-index: 1000; // 1 above the out of focus warning
     padding: 0.5rem 1rem;
-    position: absolute;
+    position: fixed;
     border: 1px solid var(--text-color);
-    bottom: 2rem;
-    left: -2rem;
-    min-width: 11rem;
+    bottom: 45vh;
+    right: 43vw;
+    height: fit-content;
+    width: fit-content;
     font-weight: normal;
     font-size: 1rem;
 

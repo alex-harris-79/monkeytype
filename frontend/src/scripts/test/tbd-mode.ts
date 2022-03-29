@@ -17,7 +17,6 @@ type WordSorter = (word: string, word2: string) => number;
 type SomeJson = { [key: string]: any };
 
 function isTbdMode(): boolean {
-  // console.log("isTbdMode(): ");
   return Config.funbox == "tbdmode";
 }
 
@@ -30,11 +29,6 @@ class TbdConfig {
     );
     TbdEvents.addSubscriber("sorterSelectChanged", (data) => {
       this.set("sorter", data["value"]);
-    });
-    TbdEvents.dispatchEvent("configInitialized", {
-      sorterName: this.getSorterName(),
-      targetSpeed: this.getTargetSpeed(),
-      groupSize: this.getGroupSize(),
     });
   }
 
@@ -76,7 +70,6 @@ class TbdConfig {
   }
 
   updateTargetSpeed(): void {
-    //console.log("updateTargetSpeed(): ");
     const newTarget = parseInt(prompt("New target speed") || "");
     if (newTarget > 0) {
       this.set("targetSpeed", newTarget.toString());
@@ -409,9 +402,6 @@ class TbdUI {
     this.resetWordsButton.addEventListener("click", () => {
       TbdEvents.dispatchEvent("resetButtonClicked");
     });
-    TbdEvents.addSubscriber("configInitialized", (config) => {
-      this.$targetThreshold.text(config["targetSpeed"]);
-    });
     TbdEvents.addSubscriber("nextGroup", (data) => {
       const group = data["group"];
       this.updateUiWords(group.getWordset().words);
@@ -426,6 +416,9 @@ class TbdUI {
     this.$tbdLostExample.on("click", (event) => {
       this.animate(event.target, "tbdLost");
     });
+
+    this.$targetThreshold.text(this.tbdMode.getConfig().getTargetSpeed());
+    this.$groupThreshold.text(this.tbdMode.getCurrentGroup().getThreshold());
   }
 
   private currentlyAnimating: Array<HTMLElement> = [];
@@ -689,7 +682,7 @@ class TbdUI {
           <span class="stat good">${TbdData.getFastestSpeedForWord(word)}</span>
         </div>`;
     }
-    wordInfoHtml += `<div class="helpText">click to reset data for '${word}'</div>`;
+    wordInfoHtml += `<div class="helpText">click to reset word data</div>`;
     this.$wordInfo.html(wordInfoHtml);
     this.getOrCreateWordElement(word).append(this.$wordInfo[0]);
     this.$wordInfo.show(200);
