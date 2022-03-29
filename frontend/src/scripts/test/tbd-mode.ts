@@ -166,12 +166,12 @@ class TbdMode {
 
   constructor(config: TbdConfig) {
     this.config = config;
-    this.config.init();
     this.monkeyTypeWordset = new Wordset([]);
     this.groups = new TbdGroups();
   }
 
   init(): void {
+    this.config.init();
     ResultsShownEvent.subscribe(this.handleResultsShownEvent.bind(this));
     TbdEvents.addSubscriber(
       "resetButtonClicked",
@@ -181,6 +181,10 @@ class TbdMode {
     TbdEvents.addSubscriber("targetSpeed-changed", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
+  }
+
+  getConfig(): TbdConfig {
+    return this.config;
   }
 
   getWord(originalWordset: Wordset): string {
@@ -307,8 +311,11 @@ class TbdUI {
   private resetWordsButton: HTMLDivElement;
   private setTargetButton: HTMLDivElement;
   private sorterSelect: HTMLSelectElement;
+  private tbdMode: TbdMode;
 
-  constructor() {
+  constructor(tbdMode: TbdMode) {
+    this.tbdMode = tbdMode;
+
     const wordsContainer = document.getElementById("tbdModeWordsContainer");
     if (!(wordsContainer instanceof HTMLDivElement)) {
       throw new Error("Could not locate TBD words container");
@@ -369,11 +376,7 @@ class TbdUI {
     });
     TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
       const group: TbdGroup = data["currentGroup"];
-      this.updateUiWords(
-        group.getWordset().words,
-        group.getThreshold(),
-        data["targetSpeed"]
-      );
+      this.updateUiWords(group.getWordset().words);
     });
     TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
       this.updateTotalProgressMeter(
@@ -407,11 +410,7 @@ class TbdUI {
     });
     TbdEvents.addSubscriber("nextGroup", (data) => {
       const group = data["group"];
-      this.updateUiWords(
-        group.getWordset().words,
-        group.getThreshold(),
-        data["targetSpeed"]
-      );
+      this.updateUiWords(group.getWordset().words);
     });
   }
 
@@ -543,13 +542,10 @@ class TbdUI {
     }
   }
 
-  updateUiWords(
-    wordsToShow: Array<string>,
-    groupSpeed: number,
-    targetSpeed: number
-  ): void {
+  updateUiWords(wordsToShow: Array<string>): void {
     // Remove words we don't want to show
     this.$wordsDiv.hide();
+
     [...document.querySelectorAll(".tbdWordContainer")]?.forEach(
       (wordElement) => {
         // @ts-ignore
@@ -562,28 +558,36 @@ class TbdUI {
     );
 
     wordsToShow.forEach((word) => {
-      const wordElement = this.getOrCreateWordElement(word);
-      this.$wordsDiv.append(wordElement);
-      // Timeout ensures transitions work
-      setTimeout(() => {
-        wordElement.dataset["beatenAtTarget"] =
-          TbdData.hasWordBeenTypedFasterThan(word, targetSpeed) ? "1" : "0";
-        wordElement.dataset["beatenAtGroup"] =
-          TbdData.hasWordBeenTypedFasterThan(word, groupSpeed) ? "1" : "0";
-        wordElement.dataset["typed"] =
-          TbdData.getSpeedsForWord(word).length == 0 ? "0" : "1";
-        const percentComplete =
-          TbdData.getMedianSpeedForWord(word) / targetSpeed;
-        const modifier = Math.min(percentComplete, 1);
-        const baseScale = 0.75;
-        const additional = (1 - baseScale) * modifier;
-        // @ts-ignore
-        wordElement.querySelector("div").style?.transform = `scale(${
-          baseScale + additional
-        })`;
-      }, 0);
+      this.updateWord(word);
     });
     this.$wordsDiv.show();
+  }
+
+  updateWord(word: string): void {
+    const wordElement = this.getOrCreateWordElement(word);
+    const targetSpeed = this.tbdMode.getConfig().getTargetSpeed();
+    const groupSpeed = this.tbdMode.getCurrentGroup().getThreshold();
+    // Timeout ensures transitions work
+    setTimeout(() => {
+      wordElement.dataset["beatenAtTarget"] =
+        TbdData.hasWordBeenTypedFasterThan(word, targetSpeed) ? "1" : "0";
+      wordElement.dataset["beatenAtGroup"] = TbdData.hasWordBeenTypedFasterThan(
+        word,
+        groupSpeed
+      )
+        ? "1"
+        : "0";
+      wordElement.dataset["typed"] =
+        TbdData.getSpeedsForWord(word).length == 0 ? "0" : "1";
+      const percentComplete = TbdData.getMedianSpeedForWord(word) / targetSpeed;
+      const modifier = Math.min(percentComplete, 1);
+      const baseScale = 0.75;
+      const additional = (1 - baseScale) * modifier;
+      // @ts-ignore
+      wordElement.querySelector("div").style?.transform = `scale(${
+        baseScale + additional
+      })`;
+    }, 0);
   }
 
   sortWords(sorter: WordSorter): void {
@@ -610,6 +614,7 @@ class TbdUI {
       newDiv.innerHTML = `<div class="tbdWord">${word}</div>`;
       newDiv.dataset["word"] = word;
       newDiv.classList.add("tbdWordContainer");
+      this.$wordsDiv.append(newDiv);
       return newDiv;
     }
     return element;
@@ -801,6 +806,7 @@ class TbdData {
     const data = TbdData.getAll();
     data.words[word] = wordData;
     TbdData.updateData(data);
+    TbdEvents.dispatchEvent("wordUpdated", { wordData });
   }
 
   static addBurst(word: string, speed: number): void {
@@ -918,11 +924,10 @@ class TbdGroup {
   }
 }
 
-const ui = new TbdUI();
-ui.init();
-
 const tbdConfig = new TbdConfig();
 const tbdMode = new TbdMode(tbdConfig);
+const ui = new TbdUI(tbdMode);
+ui.init();
 tbdMode.init();
 
 export function getTbdMode(): TbdMode {
