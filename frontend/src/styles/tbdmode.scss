@@ -71,6 +71,10 @@
           color: var(--main-color);
           font-weight: bold;
         }
+
+        &[data-missed-more="1"] > .tbdWord {
+          border-bottom: 2px solid var(--error-color);
+        }
       }
     }
   }

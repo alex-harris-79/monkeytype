@@ -579,6 +579,11 @@ class TbdUI {
         : "0";
       wordElement.dataset["typed"] =
         TbdData.getSpeedsForWord(word).length == 0 ? "0" : "1";
+      wordElement.dataset["missedMore"] =
+        TbdData.getMistypedCountForWord(word) >
+        TbdData.getSpeedsForWord(word).length
+          ? "1"
+          : "0";
       const percentComplete = TbdData.getMedianSpeedForWord(word) / targetSpeed;
       const modifier = Math.min(percentComplete, 1);
       const baseScale = 0.75;
