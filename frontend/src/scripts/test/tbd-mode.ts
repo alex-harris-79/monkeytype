@@ -425,6 +425,7 @@ class TbdUI {
     if (this.currentlyAnimating.includes(element)) {
       return;
     }
+
     const callback = (event: AnimationEvent): void => {
       if (event.animationName !== animation) {
         return;
@@ -432,12 +433,13 @@ class TbdUI {
       const index = this.currentlyAnimating.findIndex(
         (animatingElement) => animatingElement == element
       );
-      if (index) {
+      if (index >= 0) {
         delete this.currentlyAnimating[index];
       }
       element.classList.remove(animation);
       element.removeEventListener("animationend", callback);
     };
+
     element.addEventListener("animationend", callback);
     this.currentlyAnimating.push(element);
     element.classList.add(animation);
@@ -452,6 +454,9 @@ class TbdUI {
       return;
     }
     const word = target.parentElement?.dataset["word"] || "";
+    if (word == "") {
+      return;
+    }
     TbdEvents.dispatchEvent("wordClicked", { word: word });
   }
 
