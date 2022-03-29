@@ -142,9 +142,9 @@ function handleSpace(): void {
   //correct word or in zen mode
   const isWordCorrect =
     currentWord == TestInput.input.current || Config.mode == "zen";
-  const $currentTestWord = $(
-    `#words .word:nth-child(${TestWords.words.currentIndex + 1})`
-  );
+
+  // This will probably break if letter mode is on or something
+  const $currentTestWord = $(`#words .word.active`);
   WordTypedEvent.dispatch(currentWord, isWordCorrect, burst, $currentTestWord);
   MonkeyPower.addPower(isWordCorrect, true);
   TestInput.incrementAccuracy(isWordCorrect);
