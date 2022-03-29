@@ -4907,6 +4907,8 @@
               <option value="typedCount">Typed Count</option>
               <option value="missedCount">Missed Count</option>
             </select>
+            <div class="spacer">|</div>
+            <div class="text-button tbdModeHelpButton">Help</div>
           </div>
           <div id="tbdModeStats">
             <div>
@@ -4920,6 +4922,160 @@
           </div>
           <div id="tbdModeWordsContainer" class="tbdMode wordsContainer">
             <div id="tbdModeWordInfo"></div>
+            <div id="tbdHelp" style="display: none">
+              <h2>TBD Mode</h2>
+              <p>
+                This mode is designed to help you target your efforts on the
+                words you have the most trouble with.
+              </p>
+              <p>Click "Help" again to close.</p>
+              <h3>"Beating" Words</h3>
+              <ul class="modeInfo">
+                <li>
+                  If a word has been typed faster than the "Target Speed" it's
+                  considered beaten
+                </li>
+                <li>A word's median speed is always used for comparisons</li>
+                <li>You can configure the "Target Speed" in WPM</li>
+                <li>
+                  After you type a word, an animation shows if you typed it
+                  <div class="tbdBeatenExample">faster</div>
+                  or
+                  <div class="tbdLostExample">slower</div>
+                  than the target speed.
+                </li>
+              </ul>
+              <h3>Word Data</h3>
+              <ul class="modeInfo">
+                <li>
+                  Word speeds are only saved after non-failed tests (i.e. no
+                  credit for words typed correctly during an expert/master mode
+                  test if you fail)
+                </li>
+                <li>Hover over a word below the test to see its stats</li>
+                <li>
+                  Click on a word below the test if you want to reset its stats
+                </li>
+                <li>
+                  Data is stored using localStorage, meaning your data will
+                  persist between sessions, but not between devices
+                </li>
+                <li>
+                  You can reset the stats for all words in the current wordset
+                  or language
+                </li>
+              </ul>
+              <h3>Groups</h3>
+              <p>
+                If you're working on a large set of words, it's not very much
+                fun to work on all of them at once because you would have to
+                type each one at least once before it would be possible to
+                determine which ones should be focused on. This is where groups
+                come in.
+              </p>
+              <ul class="modeInfo">
+                <li>
+                  When you change to a different language or custom set of
+                  words, the words will be split into groups
+                </li>
+                <li>The group size is configurable</li>
+                <li>The current group's words are displayed below the test</li>
+                <li>
+                  Each group has its own threshold which always starts at 1
+                </li>
+                <li>
+                  Test words are selected exclusively from the current group,
+                  with a bias for words typed slower than the group threshold
+                </li>
+                <li>
+                  Once all the words in a group have been typed correctly at
+                  least once, the threshold increases until one or more words
+                  are no longer "beaten" as far as the group is concerned
+                </li>
+                <li>
+                  Once all the words have been typed faster than the overall
+                  "Target Speed", TBD Mode moves on to the next group with
+                  unbeaten words
+                </li>
+                <li>
+                  When groups are created, each group only contains words that
+                  haven't been typed faster than the "Target Speed"
+                </li>
+                <li>Changing the "Target Speed" regenerates the groups</li>
+                <li>
+                  Groups *are not* saved locally like word data is. Every time
+                  you refresh the page you will get new groups.
+                </li>
+              </ul>
+              <h3>Progress Meters</h3>
+              <p>This mode has 2 progress meters:</p>
+              <p>
+                The top shows your overall progress, i.e. how many of the words
+                in the current wordset (e.g. english, english 5k, a custom set
+                of words) have been typed faster than the "Target Speed".
+              </p>
+              <p>
+                The bottom represents group progress, i.e. the percentage of
+                words in the current group that have been typed faster than the
+                "Target Speed").
+              </p>
+              <h3>Word Styles</h3>
+              <p>
+                The current group's words are displayed differently based on a
+                few different factors. See below for some examples.
+              </p>
+              <p>
+                Not represented here is that word size is based on speed (median
+                speed vs. "Target Speed")
+              </p>
+              <div
+                class="tbdWordContainer"
+                data-beaten-at-target="0"
+                data-beaten-at-group="0"
+                data-typed="0"
+                data-missed-more="0"
+              >
+                <div class="tbdWord">NeverTypedCorrectly</div>
+              </div>
+              <div
+                class="tbdWordContainer"
+                data-beaten-at-target="0"
+                data-beaten-at-group="1"
+                data-typed="1"
+                data-missed-more="0"
+              >
+                <div class="tbdWord">BeatenAtGroupThreshold</div>
+              </div>
+              <div
+                class="tbdWordContainer"
+                data-beaten-at-target="1"
+                data-beaten-at-group="1"
+                data-typed="1"
+                data-missed-more="0"
+              >
+                <div class="tbdWord">BeatenAtTargetSpeed</div>
+              </div>
+              <div
+                class="tbdWordContainer"
+                data-beaten-at-target="1"
+                data-beaten-at-group="1"
+                data-typed="1"
+                data-missed-more="1"
+              >
+                <div class="tbdWord">MissedMoreOftenThanTypedCorrectly</div>
+                <div>
+                  This last one has also been "beaten", but the underline can
+                  appear for any state
+                </div>
+              </div>
+              <h3>Known Limitations</h3>
+              <ul class="modeInfo">
+                <li>Custom wordsets using pipe delimiters don't work</li>
+                <li>You smell</li>
+                <li>JK you're great. Thanks for trying my funbox mode!</li>
+              </ul>
+              <div class="button tbdModeHelpButton">Close Help</div>
+            </div>
             <div class="words"></div>
           </div>
         </div>

@@ -306,6 +306,10 @@ class TbdUI {
     "#tbdmodeInfo .progressMeterGroup"
   );
   private $tbdModeInfo: JQuery<HTMLElement> = $("#tbdmodeInfo");
+  private $tbdModeHelpButton: JQuery<HTMLElement> = $(".tbdModeHelpButton");
+  private $tbdModeHelp: JQuery<HTMLElement> = $("#tbdHelp");
+  private $tbdBeatenExample: JQuery<HTMLElement> = $(".tbdBeatenExample");
+  private $tbdLostExample: JQuery<HTMLElement> = $(".tbdLostExample");
 
   private wordsContainer: HTMLDivElement;
   private resetWordsButton: HTMLDivElement;
@@ -411,6 +415,16 @@ class TbdUI {
     TbdEvents.addSubscriber("nextGroup", (data) => {
       const group = data["group"];
       this.updateUiWords(group.getWordset().words);
+    });
+    this.$tbdModeHelpButton.on("click", () => {
+      this.$tbdModeHelp.toggle(250);
+      this.$wordsDiv.toggle(250);
+    });
+    this.$tbdBeatenExample.on("click", (event) => {
+      this.animate(event.target, "tbdBeaten");
+    });
+    this.$tbdLostExample.on("click", (event) => {
+      this.animate(event.target, "tbdLost");
     });
   }
 
@@ -551,7 +565,7 @@ class TbdUI {
     // Remove words we don't want to show
     this.$wordsDiv.hide();
 
-    [...document.querySelectorAll(".tbdWordContainer")]?.forEach(
+    [...document.querySelectorAll(".words .tbdWordContainer")]?.forEach(
       (wordElement) => {
         // @ts-ignore
         const word = wordElement.dataset["word"];

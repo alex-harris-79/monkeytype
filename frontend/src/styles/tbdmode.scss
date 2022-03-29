@@ -1,5 +1,6 @@
 #tbdmodeInfo {
   height: 40vh;
+  overflow: scroll;
 
   & > * {
     margin-top: 1.5rem;
@@ -48,43 +49,78 @@
   }
 
   .wordsContainer {
+    #tbdHelp {
+      .tbdBeatenExample,
+      .tbdLostExample {
+        border-bottom: 1px dashed var(--main-color);
+        display: inline-block;
+      }
+
+      .tbdWordContainer {
+        margin-bottom: 0.2rem;
+      }
+
+      .tbdWord {
+        display: inline-block;
+      }
+
+      .modeInfo {
+        margin-bottom: 2rem;
+        list-style-type: disc;
+        li {
+          margin-bottom: 0.25rem;
+        }
+      }
+
+      .explainerText {
+        color: var(--text-color);
+        margin-bottom: 1rem;
+      }
+
+      margin-bottom: 2rem;
+      h2,
+      h3,
+      h4 {
+        color: var(--main-color);
+      }
+    }
+
     .words {
       display: flex;
       flex-wrap: wrap;
+    }
 
-      .tbdWordContainer {
-        padding: 0 5px;
-        position: relative;
+    .tbdWordContainer {
+      padding: 0 5px;
+      position: relative;
+      color: var(--text-color);
+
+      &:hover {
+        cursor: crosshair;
+      }
+
+      .tbdWord {
+        transition: 1500ms ease;
+        font-size: 1.5rem; // Same as test words
+        color: var(--sub-color);
+      }
+
+      &[data-typed="0"] > .tbdWord {
+        border-bottom: 1px dashed var(--sub-color);
+      }
+
+      &[data-beaten-at-group="1"] > .tbdWord {
         color: var(--text-color);
-        &:hover {
-          cursor: crosshair;
-        }
+        font-weight: bold;
+      }
 
-        .tbdWord {
-          transition: 1500ms ease;
-          font-size: 1.5rem; // Same as test words
-          color: var(--sub-color);
-        }
+      &[data-beaten-at-target="1"] > .tbdWord {
+        color: var(--main-color);
+        font-weight: bold;
+      }
 
-        &[data-typed="0"] > .tbdWord {
-          &::after {
-            content: "*"; // indicate it hasn't been typed yet
-          }
-        }
-
-        &[data-beaten-at-group="1"] > .tbdWord {
-          color: var(--text-color);
-          font-weight: bold;
-        }
-
-        &[data-beaten-at-target="1"] > .tbdWord {
-          color: var(--main-color);
-          font-weight: bold;
-        }
-
-        &[data-missed-more="1"] > .tbdWord {
-          border-bottom: 2px solid var(--error-color);
-        }
+      &[data-missed-more="1"] > .tbdWord {
+        border-bottom: 2px solid var(--error-color);
       }
     }
   }
@@ -157,7 +193,7 @@
 }
 
 @keyframes tbdLost {
-  30% {
+  50% {
     background-color: var(--error-color);
     transform: translateY(13%);
   }
