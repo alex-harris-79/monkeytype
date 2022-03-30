@@ -20,16 +20,17 @@ class TbdConfig {
     TbdEvents.addSubscriber("sorterSelectChanged", (data) => {
       this.set("sorter", data["value"]);
     });
+
     TbdEvents.addSubscriber("configUpdateRequested", (data) => {
       switch (data["configSetting"]) {
         case "targetSpeed":
-          this.processTargetSpeedUpdate();
+          this.processTargetSpeedUpdateRequest();
           break;
         case "groupSize":
-          this.processGroupSizeUpdate();
+          this.processGroupSizeUpdateRequest();
           break;
         case "animations":
-          this.processAnimationToggle();
+          this.processAnimationToggleRequest();
           break;
       }
     });
@@ -63,6 +64,10 @@ class TbdConfig {
     return this.get("sorter", "alphabetical-asc");
   }
 
+  getSorter(): WordSorter {
+    return TbdSorting.getSorter(this.getSorterName());
+  }
+
   getTargetSpeed(): number {
     return parseInt(this.get("targetSpeed", "75"));
   }
@@ -71,14 +76,14 @@ class TbdConfig {
     return parseInt(this.get("groupSize", "30"));
   }
 
-  processTargetSpeedUpdate(): void {
+  processTargetSpeedUpdateRequest(): void {
     const newSpeed = parseInt(prompt("New target speed") || "");
     if (newSpeed > 0) {
       this.set("targetSpeed", newSpeed.toString());
     }
   }
 
-  processAnimationToggle(): void {
+  processAnimationToggleRequest(): void {
     const enabled = confirm("Confirm to enable, cancel to disable.");
     if (enabled) {
       this.set("animationsEnabled", "1");
@@ -91,7 +96,7 @@ class TbdConfig {
     return this.get("animationsEnabled") == "1";
   }
 
-  processGroupSizeUpdate(): void {
+  processGroupSizeUpdateRequest(): void {
     const newSize = parseInt(prompt("New group size") || "");
     if (newSize > 0) {
       this.set("groupSize", newSize.toString());
@@ -170,7 +175,6 @@ class TbdMode {
   }
 
   init(): void {
-    this.config.init();
     WordTypedEvent.subscribe(this.handleWordTyped.bind(this));
     ResultsShownEvent.subscribe(this.handleResultsShownEvent.bind(this));
     TbdEvents.addSubscriber(
@@ -552,9 +556,7 @@ class TbdUI {
     TbdEvents.addSubscriber("nextGroup", (data) => {
       const group = data["group"];
       this.updateUiWords(group.getWordset().words);
-      const sorter = TbdSorting.getSorter(
-        this.tbdMode.getConfig().getSorterName()
-      );
+      const sorter = this.tbdMode.getConfig().getSorter();
       // Give the UI a chance to update before sorting
       setTimeout(() => this.sortWords(sorter), 50);
     });
@@ -1116,6 +1118,8 @@ function handleFunboxChange(
   }
   if (isTbdMode() && !getTbdMode()) {
     const tbdConfig = new TbdConfig();
+    tbdConfig.init();
+
     tbdMode = new TbdMode(tbdConfig);
     tbdMode.init();
 
