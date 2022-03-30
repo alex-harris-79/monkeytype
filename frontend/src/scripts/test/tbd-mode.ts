@@ -1100,9 +1100,10 @@ class TbdGroup {
 
 const tbdConfig = new TbdConfig();
 const tbdMode = new TbdMode(tbdConfig);
+tbdMode.init();
+
 const ui = new TbdUI(tbdMode);
 ui.init();
-tbdMode.init();
 
 export function getTbdMode(): TbdMode {
   return tbdMode;
