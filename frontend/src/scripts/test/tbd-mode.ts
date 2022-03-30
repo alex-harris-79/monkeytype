@@ -78,6 +78,11 @@ class TbdConfig {
     });
   }
 
+  bumpTargetSpeed(): void {
+    const current = this.getTargetSpeed();
+    this.set("targetSpeed", (current + 5).toString());
+  }
+
   getSorterName(): string {
     return this.get("sorter", "alphabetical-asc");
   }
@@ -185,6 +190,8 @@ class TbdMode {
   private config: TbdConfig;
   private monkeyTypeWordset: Wordset;
   private groups: TbdGroups;
+  private currentGroup: TbdGroup | undefined;
+  private previousWord = "";
 
   constructor(config: TbdConfig) {
     this.config = config;
@@ -269,8 +276,6 @@ class TbdMode {
     return this.config;
   }
 
-  private previousWord = "";
-
   getWord(originalWordset: Wordset): string {
     this.handleWordsetForNextWord(originalWordset);
     const group = this.getCurrentGroup();
@@ -293,6 +298,9 @@ class TbdMode {
   }
 
   getCurrentGroup(): TbdGroup {
+    if (this.currentGroup) {
+      return this.currentGroup;
+    }
     return (
       this.groups.getFirstIncompleteGroup(this.config.getTargetSpeed()) ||
       new TbdGroup(this.monkeyTypeWordset)
@@ -340,14 +348,29 @@ class TbdMode {
       this.saveBurstsFromLatestResults();
     }
     this.saveMissesFromLatestResult();
-    const group = this.getCurrentGroup();
+    const group = this.getNextGroup();
     group.increaseThresholdUntilSomeWordsAreUnbeaten();
+
+    this.currentGroup = group;
 
     TbdEvents.dispatchEvent("resultsProcessed", {
       currentGroup: group,
       monkeyTypeWordset: this.monkeyTypeWordset,
       targetSpeed: this.config.getTargetSpeed(),
     });
+  }
+
+  getNextGroup(): TbdGroup {
+    let next = this.getCurrentGroup();
+    // A group with the monkeyTypeWordset is the default value if getCurrentGroup
+    // can't find a real group. This whole method is very janky.
+    while (next.getWordset() == this.monkeyTypeWordset) {
+      // Increasing the target speed triggers regeneration of groups
+      this.getConfig().bumpTargetSpeed();
+      next = this.getCurrentGroup();
+    }
+
+    return next;
   }
 
   saveBurstsFromLatestResults(): void {
@@ -464,6 +487,7 @@ class TbdUI {
   private wordsContainer: HTMLDivElement;
   private sorterSelect: HTMLSelectElement;
   private tbdMode: TbdMode;
+  private currentlyAnimating: Array<HTMLElement> = [];
 
   constructor(tbdMode: TbdMode) {
     this.tbdMode = tbdMode;
@@ -594,8 +618,6 @@ class TbdUI {
       }
     });
   }
-
-  private currentlyAnimating: Array<HTMLElement> = [];
 
   /**
    * @param element
@@ -898,10 +920,6 @@ class TbdData {
     1000
   );
 
-  private static updateLocalStorage(data: TbdDataType): void {
-    localStorage.setItem(TbdData.localStorageKey, JSON.stringify(data));
-  }
-
   static getAll(): TbdDataType {
     if (TbdData.data) {
       return TbdData.data;
@@ -1021,6 +1039,10 @@ class TbdData {
     data.missedCount += missedCount;
     TbdData.saveWordData(word, data);
   }
+
+  private static updateLocalStorage(data: TbdDataType): void {
+    localStorage.setItem(TbdData.localStorageKey, JSON.stringify(data));
+  }
 }
 
 class TbdGroups {
@@ -1101,7 +1123,7 @@ class TbdGroup {
   }
 
   bumpThreshold(): void {
-    this.threshold += 1;
+    this.threshold += 5;
     TbdEvents.dispatchEvent("groupThresholdChanged", {
       threshold: this.threshold,
     });
