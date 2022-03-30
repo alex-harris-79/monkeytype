@@ -269,15 +269,27 @@ class TbdMode {
     return this.config;
   }
 
+  private previousWord = "";
+
   getWord(originalWordset: Wordset): string {
     this.handleWordsetForNextWord(originalWordset);
     const group = this.getCurrentGroup();
     const random = Math.random() * 100;
-    if (random < 60 && group.getUnbeatenWordset().length > 0) {
-      return group.getUnbeatenWordset().randomWord();
+    const unbeatenWordset = group.getUnbeatenWordset();
+    const isThereMoreThanOneWord = group.getWordset().length > 1;
+    let nextWord: string;
+    if (random < 60 && unbeatenWordset.length > 0) {
+      nextWord = unbeatenWordset.randomWord();
     } else {
-      return group.getWordset().randomWord();
+      nextWord = group.getWordset().randomWord();
     }
+
+    if (this.previousWord == nextWord && isThereMoreThanOneWord) {
+      return this.getWord(originalWordset);
+    }
+
+    this.previousWord = nextWord;
+    return nextWord;
   }
 
   getCurrentGroup(): TbdGroup {
