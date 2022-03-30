@@ -424,7 +424,7 @@ class TbdMode {
     const response = prompt(
       `This will delete ALL your word data. To confirm, type: ${confirmationString}`
     );
-    if (response == "") {
+    if (response == null) {
       return;
     }
     if (response == confirmationString) {
