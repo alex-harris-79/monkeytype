@@ -287,6 +287,10 @@ class TbdMode {
     );
   }
 
+  getMonkeyTypeWordset(): Wordset {
+    return this.monkeyTypeWordset;
+  }
+
   handleWordsetForNextWord(wordset: Wordset): void {
     if (
       this.monkeyTypeWordset.length != wordset.length &&
@@ -531,6 +535,16 @@ class TbdUI {
       );
       // Give the UI a chance to update before sorting
       setTimeout(() => this.sortWords(sorter), 50);
+    });
+    TbdEvents.addSubscriber("nextGroup", () => {
+      this.updateGroupProgressMeter(
+        this.tbdMode.getCurrentGroup(),
+        this.tbdMode.getConfig().getTargetSpeed()
+      );
+      this.updateTotalProgressMeter(
+        this.tbdMode.getMonkeyTypeWordset(),
+        this.tbdMode.getConfig().getTargetSpeed()
+      );
     });
     this.$tbdModeHelpButton.on("click", () => {
       this.$tbdModeHelp.toggle(250);
