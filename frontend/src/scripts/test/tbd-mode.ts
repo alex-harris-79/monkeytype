@@ -17,7 +17,6 @@ type SomeJson = { [key: string]: any };
 
 class TbdConfig {
   init(): void {
-    WordTypedEvent.subscribe(this.handleWordTyped.bind(this));
     TbdEvents.addSubscriber("sorterSelectChanged", (data) => {
       this.set("sorter", data["value"]);
     });
@@ -34,24 +33,6 @@ class TbdConfig {
           break;
       }
     });
-  }
-
-  handleWordTyped(
-    _word: string,
-    isCorrect: boolean,
-    burst: number,
-    currentWordElement: JQuery<HTMLElement>
-  ): void {
-    if (!isCorrect) {
-      return;
-    }
-    const wordElement = currentWordElement[0];
-    const typedAboveTarget = burst > this.getTargetSpeed();
-    if (typedAboveTarget) {
-      TbdEvents.dispatchEvent("wordTypedCorrectly", { wordElement });
-    } else {
-      TbdEvents.dispatchEvent("wordMissed", { wordElement });
-    }
   }
 
   get(key: string, defaultValue = ""): string {
@@ -190,6 +171,7 @@ class TbdMode {
 
   init(): void {
     this.config.init();
+    WordTypedEvent.subscribe(this.handleWordTyped.bind(this));
     ResultsShownEvent.subscribe(this.handleResultsShownEvent.bind(this));
     TbdEvents.addSubscriber(
       "resetButtonClicked",
@@ -222,6 +204,24 @@ class TbdMode {
           break;
       }
     });
+  }
+
+  handleWordTyped(
+    _word: string,
+    isCorrect: boolean,
+    burst: number,
+    currentWordElement: JQuery<HTMLElement>
+  ): void {
+    if (!isCorrect) {
+      return;
+    }
+    const wordElement = currentWordElement[0];
+    const typedAboveTarget = burst > this.getConfig().getTargetSpeed();
+    if (typedAboveTarget) {
+      TbdEvents.dispatchEvent("wordTypedCorrectly", { wordElement });
+    } else {
+      TbdEvents.dispatchEvent("wordMissed", { wordElement });
+    }
   }
 
   handleResetCurrentWordsRequest(): void {
