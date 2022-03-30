@@ -49,8 +49,7 @@ import * as ConfigEvent from "../observables/config-event";
 import * as TimerEvent from "../observables/timer-event";
 import * as Last10Average from "../elements/last-10-average";
 import * as Monkey from "./monkey";
-import * as TbdMode from "./tbd-mode";
-import * as TestStartedEvent from "../observables/test-started-event";
+import { getTbdMode } from "./tbd-mode";
 import objectHash from "object-hash";
 import * as AnalyticsController from "../controllers/analytics-controller";
 import { Auth } from "../firebase";
@@ -279,7 +278,6 @@ export function startTest(): boolean {
   //use a recursive self-adjusting timer to avoid time drift
   TestStats.setStart(performance.now());
   TestTimer.start();
-  TestStartedEvent.dispatch();
   return true;
 }
 
@@ -617,7 +615,7 @@ function applyFunboxesToWord(word: string, wordset?: Wordset.Wordset): string {
   } else if (wordset !== undefined && Config.funbox === "weakspot") {
     word = WeakSpot.getWord(wordset);
   } else if (wordset !== undefined && Config.funbox === "tbdmode") {
-    word = TbdMode.getTbdMode().getWord(wordset);
+    word = getTbdMode()?.getWord(wordset) || word;
   }
   return word;
 }

@@ -2,7 +2,6 @@ import { Wordset } from "./wordset";
 import * as TestInput from "./test-input";
 import * as PageChangeEvent from "../observables/page-change-event";
 import * as ConfigEvent from "../observables/config-event";
-import * as TestStartedEvent from "../observables/test-started-event";
 import { mean, median } from "../utils/misc";
 import Config from "../config";
 import Page from "../pages/page";
@@ -15,10 +14,6 @@ import { debounce } from "../utils/debounce";
 
 type WordSorter = (word: string, word2: string) => number;
 type SomeJson = { [key: string]: any };
-
-function isTbdMode(): boolean {
-  return Config.funbox == "tbdmode";
-}
 
 class TbdConfig {
   init(): void {
@@ -509,9 +504,8 @@ class TbdUI {
   }
 
   init(): void {
+    this.$tbdModeInfo.show(300);
     PageChangeEvent.subscribe(this.pageChangeHandler.bind(this));
-    TestStartedEvent.subscribe(this.handleTestStartedEvent.bind(this));
-    ConfigEvent.subscribe(this.handleFunboxChange.bind(this));
     this.wordsContainer.addEventListener(
       "mousemove",
       this.updateWordInfo.bind(this)
@@ -682,31 +676,6 @@ class TbdUI {
         }
       }
     );
-  }
-
-  handleFunboxChange(
-    key: string,
-    _newValue?: MonkeyTypes.ConfigValues,
-    _nosave?: boolean,
-    _previousValue?: MonkeyTypes.ConfigValues,
-    _fullConfig?: MonkeyTypes.Config
-  ): void {
-    if (key != "funbox") {
-      return;
-    }
-    this.toggleUI();
-  }
-
-  handleTestStartedEvent(): void {
-    this.toggleUI();
-  }
-
-  toggleUI(): void {
-    if (isTbdMode()) {
-      this.$tbdModeInfo.show();
-    } else {
-      this.$tbdModeInfo.hide();
-    }
   }
 
   updateTotalProgressMeter(
@@ -1028,6 +997,9 @@ class TbdData {
   }
 
   static addBurst(word: string, speed: number): void {
+    if (word == "") {
+      return;
+    }
     const wordData = TbdData.getDataForWord(word);
     wordData.speeds.push(speed);
     TbdData.saveWordData(word, wordData);
@@ -1146,13 +1118,37 @@ class TbdGroup {
   }
 }
 
-const tbdConfig = new TbdConfig();
-const tbdMode = new TbdMode(tbdConfig);
-tbdMode.init();
+ConfigEvent.subscribe(handleFunboxChange);
 
-const ui = new TbdUI(tbdMode);
-ui.init();
+function isTbdMode(): boolean {
+  return Config.funbox == "tbdmode";
+}
 
-export function getTbdMode(): TbdMode {
+function handleFunboxChange(
+  key: string,
+  _newValue?: MonkeyTypes.ConfigValues,
+  _nosave?: boolean,
+  _previousValue?: MonkeyTypes.ConfigValues,
+  _fullConfig?: MonkeyTypes.Config
+): void {
+  if (key != "funbox") {
+    return;
+  }
+  if (isTbdMode() && !getTbdMode()) {
+    const tbdConfig = new TbdConfig();
+    tbdMode = new TbdMode(tbdConfig);
+    tbdMode.init();
+
+    const ui = new TbdUI(tbdMode);
+    ui.init();
+  } else if (!isTbdMode() && getTbdMode()) {
+    // This was the easiest way I could think of to ensure there's nothing left over
+    // after switching from TBD Mode to something else.
+    location.reload();
+  }
+}
+
+let tbdMode: TbdMode | undefined;
+export function getTbdMode(): TbdMode | undefined {
   return tbdMode;
 }
