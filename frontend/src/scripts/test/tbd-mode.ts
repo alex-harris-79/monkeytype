@@ -142,38 +142,32 @@ class TbdSorting {
   }
 
   static alphabeticalDescendingSorter(word: string, word2: string): number {
-    //console.log("alphabeticalDescendingSorter ");
     return word.toLowerCase() < word2.toLowerCase() ? 1 : -1;
   }
 
   static alphabeticalAscendingSorter(word: string, word2: string): number {
-    //console.log("alphabeticalAscendingSorter ");
     return word.toLowerCase() < word2.toLowerCase() ? -1 : 1;
   }
 
   static speedAscendingSorter(word: string, word2: string): number {
-    //console.log("speedAscendingSorter ");
     const speed1 = TbdData.getMedianSpeedForWord(word);
     const speed2 = TbdData.getMedianSpeedForWord(word2);
     return speed1 - speed2;
   }
 
   static speedDescendingSorter(word: string, word2: string): number {
-    //console.log("speedDescendingSorter ");
     const speed1 = TbdData.getMedianSpeedForWord(word);
     const speed2 = TbdData.getMedianSpeedForWord(word2);
     return speed2 - speed1;
   }
 
   static typedCountSorter(word: string, word2: string): number {
-    //console.log("typedCountSorter ");
     const typed1 = TbdData.getSpeedsForWord(word).length;
     const typed2 = TbdData.getSpeedsForWord(word2).length;
     return typed2 - typed1;
   }
 
   static missedCountSorter(word: string, word2: string): number {
-    // console.log("missedCountSorter ");
     return (
       TbdData.getMistypedCountForWord(word2) -
       TbdData.getMistypedCountForWord(word)
@@ -369,7 +363,6 @@ class TbdMode {
   }
 
   saveBurstsFromLatestResults(): void {
-    // console.log("saveBurstsFromLatestResults(): ");
     const resultWords = TestInput.input.history;
     const resultBursts = TestInput.burstHistory;
 
@@ -381,7 +374,6 @@ class TbdMode {
   }
 
   resetCurrentWords(): void {
-    //console.log("resetCurrentWords(): ");
     if (
       !confirm(
         "Are you sure you want to reset the stats for the current words?"
@@ -682,7 +674,6 @@ class TbdUI {
     monkeyTypeWordset: Wordset,
     targetSpeed: number
   ): void {
-    //console.log("updateProgressMeter(): ");
     const allWords = monkeyTypeWordset.words;
     const count = allWords.length;
     const beatenAtTargetCount = allWords.filter((word: string) => {
@@ -710,10 +701,6 @@ class TbdUI {
   }
 
   pageChangeHandler(_previousPage: Page, nextPage: Page): void {
-    // console.log("pageChangeHandler(_previousPage: ");
-    if (Config.funbox !== "tbdmode") {
-      return;
-    }
     const pagesToShowInfo = ["test"];
     if (pagesToShowInfo.includes(nextPage.name)) {
       this.$tbdModeInfo.show();
@@ -806,7 +793,6 @@ class TbdUI {
   }
 
   updateWordInfo(event: MouseEvent): void {
-    // console.log("updateWordInfo(event: ");
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -865,7 +851,6 @@ class TbdEvents {
   } = {};
 
   static dispatchEvent(name: string, data: SomeJson = {}): void {
-    console.log({ name, data });
     const subscribers = this.subscribers[name] || [];
     subscribers.forEach((subscriber) => {
       subscriber(data);
@@ -944,12 +929,10 @@ class TbdData {
   }
 
   static getSpeedsForWord(word: string): Array<number> {
-    // console.log("getSpeedsForWord(word: ");
     return TbdData.getDataForWord(word).speeds || [];
   }
 
   static getSlowestSpeedForWord(word: string): number {
-    //console.log("getSlowestSpeedForWord(word: ");
     const speeds = TbdData.getSpeedsForWord(word);
     if (speeds.length == 0) {
       return 0;
@@ -959,7 +942,6 @@ class TbdData {
   }
 
   static getFastestSpeedForWord(word: string): number {
-    // console.log("getFastestSpeedForWord(word: ");
     const speeds = TbdData.getSpeedsForWord(word);
     if (speeds.length == 0) {
       return 0;
@@ -969,7 +951,6 @@ class TbdData {
   }
 
   static getMistypedCountForWord(word: string): number {
-    //console.log("getMistypedCountForWord(word: ");
     return TbdData.getDataForWord(word).missedCount;
   }
 
@@ -1006,7 +987,6 @@ class TbdData {
   }
 
   static addToMissedCount(word: string, missedCount: number): void {
-    // console.log("addToMissedCount(word: ");
     const data = TbdData.getDataForWord(word);
     data.missedCount += missedCount;
     TbdData.saveWordData(word, data);
