@@ -188,12 +188,13 @@ class TbdMode {
   private config: TbdConfig;
   private monkeyTypeWordset: Wordset;
   private groups: TbdGroups;
-  private currentGroup: TbdGroup | undefined;
+  private currentGroup: TbdGroup;
   private previousWord = "";
 
   constructor(config: TbdConfig) {
     this.config = config;
     this.monkeyTypeWordset = new Wordset([]);
+    this.currentGroup = new TbdGroup(this.monkeyTypeWordset);
     this.groups = new TbdGroups();
   }
 
@@ -211,7 +212,7 @@ class TbdMode {
     TbdEvents.addSubscriber("groupSize-changed", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
-    TbdEvents.addSubscriber("wordsReset", () => {
+    TbdEvents.addSubscriber("wordReset", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
 
@@ -317,13 +318,30 @@ class TbdMode {
   }
 
   getCurrentGroup(): TbdGroup {
-    if (this.currentGroup) {
-      return this.currentGroup;
+    return this.currentGroup;
+  }
+
+  getFirstIncompleteGroup(): TbdGroup | null {
+    return this.groups.getFirstIncompleteGroup(this.config.getTargetSpeed());
+  }
+
+  recalculateCurrentGroup(): void {
+    if (
+      this.currentGroup.getUnbeatenWordset().length > 0 &&
+      this.getCurrentGroup().getThreshold() <= this.getConfig().getTargetSpeed()
+    ) {
+      return;
     }
-    return (
-      this.groups.getFirstIncompleteGroup(this.config.getTargetSpeed()) ||
-      new TbdGroup(this.monkeyTypeWordset)
-    );
+    let next: TbdGroup | null = this.getFirstIncompleteGroup();
+    while (next == null) {
+      this.getConfig().bumpTargetSpeed(); // side effects, regenerates all groups
+      next = this.getFirstIncompleteGroup();
+    }
+    this.currentGroup = next;
+    TbdEvents.dispatchEvent("nextGroup", {
+      group: this.getCurrentGroup(),
+      targetSpeed: this.config.getTargetSpeed(),
+    });
   }
 
   getMonkeyTypeWordset(): Wordset {
@@ -352,14 +370,22 @@ class TbdMode {
       );
     });
     const uniqueBelowTarget = new Set(notAboveTargetSpeed);
+    if (uniqueBelowTarget.size == 0) {
+      this.getConfig().bumpTargetSpeed();
+      // Bumping the target triggers a regeneration of groups and infinite loops are no fun
+      return;
+    }
     this.groups.regenerateGroups(
       Array.from(uniqueBelowTarget),
       this.config.getGroupSize()
     );
-    TbdEvents.dispatchEvent("nextGroup", {
-      group: this.getCurrentGroup(),
-      targetSpeed: this.config.getTargetSpeed(),
-    });
+    if (this.groups.getGroups().length > 0) {
+      this.currentGroup = this.groups.getGroups()[0];
+      TbdEvents.dispatchEvent("nextGroup", {
+        group: this.getCurrentGroup(),
+        targetSpeed: this.config.getTargetSpeed(),
+      });
+    }
   }
 
   handleResultsShownEvent(results: UpdateData): void {
@@ -367,29 +393,14 @@ class TbdMode {
       this.saveBurstsFromLatestResults();
     }
     this.saveMissesFromLatestResult();
-    const group = this.getNextGroup();
-    group.increaseThresholdUntilSomeWordsAreUnbeaten();
-
-    this.currentGroup = group;
+    this.recalculateCurrentGroup();
+    this.getCurrentGroup().increaseThresholdUntilSomeWordsAreUnbeaten();
 
     TbdEvents.dispatchEvent("resultsProcessed", {
-      currentGroup: group,
+      currentGroup: this.getCurrentGroup(),
       monkeyTypeWordset: this.monkeyTypeWordset,
       targetSpeed: this.config.getTargetSpeed(),
     });
-  }
-
-  getNextGroup(): TbdGroup {
-    let next = this.getCurrentGroup();
-    // A group with the monkeyTypeWordset is the default value if getCurrentGroup
-    // can't find a real group. This whole method is very janky.
-    while (next.getWordset() == this.monkeyTypeWordset) {
-      // Increasing the target speed triggers regeneration of groups
-      this.getConfig().bumpTargetSpeed();
-      next = this.getCurrentGroup();
-    }
-
-    return next;
   }
 
   saveBurstsFromLatestResults(): void {
@@ -456,13 +467,21 @@ class TbdMode {
     if (response == confirmationString) {
       allData.words = {};
       TbdData.updateData(allData, true);
-      TbdEvents.dispatchEvent("wordsReset");
       alert(
         "Ok! Your data has been deleted and you're starting over from scratch."
       );
+      location.reload();
     } else {
       alert(
-        `Good effort, but you typed '${response}' instead of '${confirmationString}'. No reset for you!`
+        `Good effort, but you typed 
+        
+        '${response}' 
+        
+        instead of 
+        
+        '${confirmationString}' 
+        
+        No reset for you!`
       );
     }
   }
@@ -502,7 +521,7 @@ class TbdUI {
   );
 
   private wordsContainer: HTMLDivElement;
-  private sorterSelect: HTMLSelectElement;
+  private $sorterSelect: JQuery<HTMLElement> = $("#tbdModeSorterSelect");
   private tbdMode: TbdMode;
   private currentlyAnimating: Array<HTMLElement> = [];
 
@@ -514,12 +533,6 @@ class TbdUI {
       throw new Error("Could not locate TBD words container");
     }
     this.wordsContainer = wordsContainer;
-
-    const sorterSelect = document.getElementById("tbdModeSorterSelect");
-    if (!(sorterSelect instanceof HTMLSelectElement)) {
-      throw new Error("Could not locate sorter select");
-    }
-    this.sorterSelect = sorterSelect;
 
     this.$wordInfo.hide();
     this.$tbdModeInfo.hide();
@@ -567,13 +580,13 @@ class TbdUI {
     TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
       this.$groupThreshold.text(data["currentGroup"].getThreshold());
     });
-    this.sorterSelect.addEventListener("change", (event) => {
+    this.$sorterSelect.on("change", (event) => {
+      if (!(event.target instanceof HTMLSelectElement)) {
+        return;
+      }
       TbdEvents.dispatchEvent("sorterSelectChanged", {
-        // @ts-ignore
         value: event.target.value,
       });
-      // @ts-ignore
-      this.sortWords(TbdSorting.getSorter(event.target.value));
     });
     TbdEvents.addSubscriber(
       "sorter-changed",
@@ -630,6 +643,18 @@ class TbdUI {
           actionValue: selectValue,
         });
       }
+    });
+
+    TbdEvents.addSubscriber("wordSaved", (data) => {
+      const word = data["word"] || "";
+      if (word == "") {
+        return;
+      }
+      const element = this.getWordElement(word);
+      if (!element) {
+        return;
+      }
+      this.updateWord(word);
     });
   }
 
@@ -755,6 +780,7 @@ class TbdUI {
     wordsToShow.forEach((word) => {
       this.updateWord(word);
     });
+
     this.$wordsDiv.show();
   }
 
@@ -806,18 +832,21 @@ class TbdUI {
     });
   }
 
-  getOrCreateWordElement(word: string): HTMLDivElement {
+  getWordElement(word: string): HTMLDivElement | null {
     const query = `.tbdWordContainer[data-word="${word}"]`;
-    const element = document.querySelector(query);
-    if (!(element instanceof HTMLDivElement)) {
-      const newDiv = document.createElement("div");
-      newDiv.innerHTML = `<div class="tbdWord">${word}</div>`;
-      newDiv.dataset["word"] = word;
-      newDiv.classList.add("tbdWordContainer");
-      this.$wordsDiv.append(newDiv);
-      return newDiv;
+    return document.querySelector(query);
+  }
+  getOrCreateWordElement(word: string): HTMLDivElement {
+    const element = this.getWordElement(word);
+    if (element) {
+      return element;
     }
-    return element;
+    const newDiv = document.createElement("div");
+    newDiv.innerHTML = `<div class="tbdWord">${word}</div>`;
+    newDiv.dataset["word"] = word;
+    newDiv.classList.add("tbdWordContainer");
+    this.$wordsDiv.append(newDiv);
+    return newDiv;
   }
 
   updateWordInfo(event: MouseEvent): void {
@@ -878,11 +907,16 @@ class TbdEvents {
     [eventName: string]: Array<TbdEventSubscriber>;
   } = {};
 
+  static debouncedDispatch = debounce(TbdEvents.dispatchEvent, 50);
+
   static dispatchEvent(name: string, data: SomeJson = {}): void {
-    const subscribers = this.subscribers[name] || [];
-    subscribers.forEach((subscriber) => {
-      subscriber(data);
-    });
+    console.log({ name, data });
+    setTimeout(() => {
+      const subscribers = this.subscribers[name] || [];
+      subscribers.forEach((subscriber) => {
+        subscriber(data);
+      });
+    }, 1);
   }
 
   static addSubscriber(name: string, callback: TbdEventSubscriber): void {
@@ -945,11 +979,11 @@ class TbdData {
 
   static resetDataForWord(word: string): void {
     TbdData.saveWordData(word, { speeds: [], missedCount: 0 });
+    TbdEvents.debouncedDispatch("wordReset", { word: word });
   }
 
   static resetDataForWords(words: Array<string>): void {
     words.forEach((word) => TbdData.resetDataForWord(word));
-    TbdEvents.dispatchEvent("wordsReset");
   }
 
   static hasWordBeenTypedFasterThan(word: string, threshold: number): boolean {
@@ -1002,7 +1036,7 @@ class TbdData {
     const data = TbdData.getAll();
     data.words[word] = wordData;
     TbdData.updateData(data);
-    TbdEvents.dispatchEvent("wordUpdated", { wordData });
+    TbdEvents.dispatchEvent("wordSaved", { word: word, data: wordData });
   }
 
   static addBurst(word: string, speed: number): void {
@@ -1103,7 +1137,7 @@ class TbdGroup {
   }
 
   bumpThreshold(): void {
-    this.threshold += 5;
+    this.threshold += 1;
     TbdEvents.dispatchEvent("groupThresholdChanged", {
       threshold: this.threshold,
     });
