@@ -32,6 +32,9 @@ class TbdConfig {
         case "animations":
           this.processAnimationToggleRequest();
           break;
+        case "unbeatenWordPercentage":
+          this.processUnbeatenWordPercentageRequest();
+          break;
       }
     });
   }
@@ -76,6 +79,10 @@ class TbdConfig {
     return parseInt(this.get("groupSize", "30"));
   }
 
+  getUnbeatenWordPercentage(): number {
+    return parseInt(this.get("unbeatenWordPercentage", "60"));
+  }
+
   processTargetSpeedUpdateRequest(): void {
     const newSpeed = parseInt(prompt("New target speed") || "");
     if (newSpeed > 0) {
@@ -101,6 +108,22 @@ class TbdConfig {
     if (newSize > 0) {
       this.set("groupSize", newSize.toString());
     }
+  }
+
+  processUnbeatenWordPercentageRequest(): void {
+    const newPercentage = parseInt(
+      prompt(
+        `The odds (still random) that a test word will be one that hasn't been typed faster than the current group threshold. 
+        
+        Must be between 10-90`,
+        this.getUnbeatenWordPercentage().toString()
+      ) || ""
+    );
+    if (isNaN(newPercentage) || newPercentage < 10 || newPercentage > 90) {
+      alert(`${newPercentage} isn't a valid choice.`);
+      return;
+    }
+    this.set("unbeatenWordPercentage", newPercentage.toString());
   }
 }
 
@@ -276,7 +299,10 @@ class TbdMode {
     const unbeatenWordset = group.getUnbeatenWordset();
     const isThereMoreThanOneWord = group.getWordset().length > 1;
     let nextWord: string;
-    if (random < 60 && unbeatenWordset.length > 0) {
+    if (
+      unbeatenWordset.length > 0 &&
+      random <= this.getConfig().getUnbeatenWordPercentage()
+    ) {
       nextWord = unbeatenWordset.randomWord();
     } else {
       nextWord = group.getWordset().randomWord();
