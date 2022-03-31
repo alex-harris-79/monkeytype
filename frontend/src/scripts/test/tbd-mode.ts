@@ -358,7 +358,7 @@ class TbdMode {
     }
     const index = this.groups.getGroups().indexOf(this.currentGroup);
     TbdEvents.dispatchEvent("nextGroup", {
-      group: this.getCurrentGroup(),
+      group: next,
       groupNumber: index + 1,
     });
   }
