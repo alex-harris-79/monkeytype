@@ -1,7 +1,9 @@
 body.tbdMode {
   // Replace margin with some padding (by no means exact) for
   // more pleasing background animations
-  #words > .word {
+  #words > .word,
+  .tbdBeatenExample,
+  .tbdLostExample {
     padding: 4px 6px;
     margin: 0;
   }

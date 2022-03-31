@@ -4908,7 +4908,7 @@
               <option value="">-- Actions --</option>
               <option value="resetCurrentWords">Reset Current Words</option>
               <option value="resetAllWords">Reset ALL Words</option>
-              <option value="copyAllData">Export to clipboard</option>
+              <option value="copyAllData">Export Data</option>
               <option value="importData">Import Data</option>
             </select>
             <div class="text-button" id="tbdModeActionButton">Go</div>
@@ -4947,11 +4947,11 @@
             <div id="tbdModeWordInfo"></div>
             <div id="tbdHelp" style="display: none">
               <h2>TBD Mode</h2>
+              <p>(Click "Help" again to close)</p>
               <p>
                 This mode is designed to help you target your efforts on the
                 words you have the most trouble with.
               </p>
-              <p>Click "Help" again to close.</p>
               <h3>"Beating" Words</h3>
               <ul class="modeInfo">
                 <li>
@@ -4965,7 +4965,8 @@
                   <div class="tbdBeatenExample">faster</div>
                   or
                   <div class="tbdLostExample">slower</div>
-                  than the target speed.
+                  than the target speed. The animations can be disabled using
+                  the config dropdown.
                 </li>
               </ul>
               <h3>Word Data</h3>
@@ -4983,23 +4984,20 @@
                   Data is stored using localStorage, meaning your data will
                   persist between sessions, but not between devices
                 </li>
-                <li>
-                  You can reset the stats for all words in the current wordset
-                  or language
-                </li>
               </ul>
               <h3>Groups</h3>
               <p>
-                If you're working on a large set of words, it's not very much
-                fun to work on all of them at once because you would have to
-                type each one at least once before it would be possible to
-                determine which ones should be focused on. This is where groups
-                come in.
+                If you're working on a large set of words (like english 450k),
+                it's not very much fun to work on all of them at once because
+                you would have to type each one at least once before it would be
+                possible to determine which ones should be focused on. This is
+                where groups come in.
               </p>
               <ul class="modeInfo">
                 <li>
                   When you change to a different language or custom set of
-                  words, the words will be split into groups
+                  words, reset word data, change the group size, or change your
+                  target speed, the words will be split into groups
                 </li>
                 <li>The group size is configurable</li>
                 <li>The current group's words are displayed below the test</li>
@@ -5008,7 +5006,8 @@
                 </li>
                 <li>
                   Test words are selected exclusively from the current group,
-                  with a bias for words typed slower than the group threshold
+                  with a bias for words typed slower than the group threshold.
+                  Just how much of a bias is configurable
                 </li>
                 <li>
                   Once all the words in a group have been typed correctly at
@@ -5024,10 +5023,14 @@
                   When groups are created, each group only contains words that
                   haven't been typed faster than the "Target Speed"
                 </li>
-                <li>Changing the "Target Speed" regenerates the groups</li>
                 <li>
                   Groups *are not* saved locally like word data is. Every time
                   you refresh the page you will get new groups.
+                </li>
+                <li>
+                  If you "beat" all the groups, the "Target Speed" will
+                  automatically increase until there is at least one group with
+                  unbeaten words.
                 </li>
               </ul>
               <h3>Progress Meters</h3>
@@ -5086,11 +5089,119 @@
                 data-missed-more="1"
               >
                 <div class="tbdWord">MissedMoreOftenThanTypedCorrectly</div>
-                <div>
+                <p>
                   This last one has also been "beaten", but the underline can
                   appear for any state
-                </div>
+                </p>
               </div>
+              <h3>Configuration Options</h3>
+              <p>
+                The goal of this mode is to be customizable in the ways that
+                matter. To change one of the configurable settings, select it
+                from the dropdown underneath the progress meters and then click
+                "Set".
+              </p>
+              <ul class="modeInfo">
+                <li>
+                  <p>Target Speed: sets the overall Target Speed</p>
+
+                  <p>
+                    Note that if you set the speed low enough that no groups
+                    would be generated (i.e. you've alraedy beaten all the words
+                    at that speed), the mode will automatically increase the
+                    target speed until there is at least one group with unbeaten
+                    words.
+                  </p>
+                </li>
+                <li>
+                  <p>
+                    Group Size: Approximately how many words will be included in
+                    each group
+                  </p>
+
+                  <p>
+                    The group size setting isn't meant to be exact. Groups are
+                    generated such that they're all as close to the same size as
+                    possible to avoid really small groups.
+                  </p>
+
+                  <p>
+                    For example, if you have 200 total words and you specify a
+                    group size of 18, you'll actually end up with 4 groups of 16
+                    and 8 groups of 17 (instead of 11 groups of 18 and one group
+                    of 2).
+                  </p>
+                </li>
+                <li>
+                  <p>
+                    Unbeaten Word %: the likelihood that a test word will be one
+                    of the words that hasn't yet been typed faster than the
+                    group threshold
+                  </p>
+                  <p>
+                    For example, let's say the current group has 20 words in it
+                    and 5 of those words are still below the current group
+                    threshold. This number is the % chance that a test word will
+                    be selected from those 5 unbeaten words.
+                  </p>
+                  <p>
+                    The odds aren't quite exact. If the check fails and a random
+                    word is selected from the full group, it still might grab
+                    one of the slow words.
+                  </p>
+                  <p>
+                    I also got tired of typing the same word multiple times in a
+                    row, so unless you only have one word in the current group
+                    you shouldn't see duplicates, even if you only have 1
+                    unbeaten word out of 20 and this setting is at 90%
+                  </p>
+                </li>
+                <li>
+                  <p>
+                    Animations On/Off: this currently only controls whether or
+                    not words will be animated as you type them based on if you
+                    typed it faster than the current target speed (NOT group
+                    speed)
+                  </p>
+                </li>
+              </ul>
+              <h3>Actions</h3>
+              <p>
+                There is also a dropdown of actions. They work similarly to
+                config settings: select the desired action from the dropdown and
+                then hit "Go".
+              </p>
+              <ul class="modeInfo">
+                <li>
+                  <p>
+                    Reset Current Words: resets all data for the current word
+                    set, i.e. the current language selected or the current set
+                    of custom words, NOT just the current group. You will be
+                    prompted to confirm your decision.
+                  </p>
+                  <p>This will trigger a regeneration of groups.</p>
+                </li>
+                <li>
+                  <p>
+                    Reset ALL words: does what it says. You will have to confirm
+                    your decision.
+                  </p>
+                  <p>This will trigger a regeneration of groups.</p>
+                </li>
+                <li>
+                  <p>
+                    Export Data: copies all of your data (word data and config
+                    settings) to your clipboard as a JSON string.
+                  </p>
+                </li>
+                <li>
+                  <p>
+                    Import Data: imports all the data from the JSON string
+                    generated from an export. Basically a way to let you
+                    transfer your progress from one device to another.
+                  </p>
+                </li>
+              </ul>
               <h3>Known Limitations</h3>
               <ul class="modeInfo">
                 <li>Custom wordsets using pipe delimiters don't work</li>
