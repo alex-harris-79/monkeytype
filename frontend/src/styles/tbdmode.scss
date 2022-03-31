@@ -1,6 +1,11 @@
 body.tbdMode {
-  #words > .word {
-    transition: opacity 1s;
+  // Replace margin with some padding (by no means exact) for
+  // more pleasing background animations
+  #words > .word,
+  .tbdBeatenExample,
+  .tbdLostExample {
+    padding: 4px 6px;
+    margin: 0;
   }
 }
 
@@ -197,23 +202,20 @@ body.tbdMode {
 }
 
 @keyframes tbdBeaten {
-  10% {
-    color: var(--main-color);
+  50% {
+    background-color: var(--main-color);
   }
 }
 .tbdBeaten {
-  animation: tbdBeaten 5s ease-out;
+  animation: tbdBeaten 1s;
 }
 
 @keyframes tbdLost {
   50% {
+    background-color: var(--error-color);
     transform: translateY(13%);
   }
 }
 .tbdLost {
   animation: tbdLost 1s;
-}
-
-.tbdLowOpacity {
-  opacity: 0.2;
 }
