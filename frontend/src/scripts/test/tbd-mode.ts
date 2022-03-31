@@ -84,7 +84,9 @@ class TbdConfig {
   }
 
   processTargetSpeedUpdateRequest(): void {
-    const newSpeed = parseInt(prompt("New target speed") || "");
+    const newSpeed = parseInt(
+      prompt("New target speed", this.getTargetSpeed().toString()) || ""
+    );
     if (newSpeed > 0) {
       this.set("targetSpeed", newSpeed.toString());
     }
@@ -104,7 +106,9 @@ class TbdConfig {
   }
 
   processGroupSizeUpdateRequest(): void {
-    const newSize = parseInt(prompt("New group size") || "");
+    const newSize = parseInt(
+      prompt("New group size", this.getGroupSize().toString()) || ""
+    );
     if (newSize > 0) {
       this.set("groupSize", newSize.toString());
     }
@@ -119,7 +123,10 @@ class TbdConfig {
         this.getUnbeatenWordPercentage().toString()
       ) || ""
     );
-    if (isNaN(newPercentage) || newPercentage < 10 || newPercentage > 90) {
+    if (isNaN(newPercentage)) {
+      return;
+    }
+    if (newPercentage < 10 || newPercentage > 90) {
       alert(`${newPercentage} isn't a valid choice.`);
       return;
     }
@@ -212,7 +219,7 @@ class TbdMode {
     TbdEvents.addSubscriber("groupSize-changed", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
-    TbdEvents.addSubscriber("wordReset", () => {
+    TbdEvents.addSubscriber("wordsReset", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
 
@@ -330,6 +337,11 @@ class TbdMode {
       this.currentGroup.getUnbeatenWordset().length > 0 &&
       this.getCurrentGroup().getThreshold() <= this.getConfig().getTargetSpeed()
     ) {
+      const index = this.groups.getGroups().indexOf(this.currentGroup);
+      TbdEvents.dispatchEvent("nextGroup", {
+        group: this.getCurrentGroup(),
+        groupNumber: index + 1,
+      });
       return;
     }
     let next: TbdGroup | null = this.getFirstIncompleteGroup();
@@ -338,9 +350,10 @@ class TbdMode {
       next = this.getFirstIncompleteGroup();
     }
     this.currentGroup = next;
+    const index = this.groups.getGroups().indexOf(this.currentGroup);
     TbdEvents.dispatchEvent("nextGroup", {
       group: this.getCurrentGroup(),
-      targetSpeed: this.config.getTargetSpeed(),
+      groupNumber: index + 1,
     });
   }
 
@@ -379,13 +392,6 @@ class TbdMode {
       Array.from(uniqueBelowTarget),
       this.config.getGroupSize()
     );
-    if (this.groups.getGroups().length > 0) {
-      this.currentGroup = this.groups.getGroups()[0];
-      TbdEvents.dispatchEvent("nextGroup", {
-        group: this.getCurrentGroup(),
-        targetSpeed: this.config.getTargetSpeed(),
-      });
-    }
   }
 
   handleResultsShownEvent(results: UpdateData): void {
@@ -470,6 +476,7 @@ class TbdMode {
       alert(
         "Ok! Your data has been deleted and you're starting over from scratch."
       );
+      // Lazy, I know
       location.reload();
     } else {
       alert(
@@ -489,6 +496,7 @@ class TbdMode {
 
 class TbdUI {
   private $groupThreshold: JQuery<HTMLElement> = $("#tbdModeGroupThreshold");
+  private $tbdModeGroupCount: JQuery<HTMLElement> = $("#tbdModeGroupCount");
   private $wordInfo: JQuery<HTMLElement> = $("#tbdModeWordInfo");
   private $wordsDiv: JQuery<HTMLElement> = $(
     "#tbdmodeInfo .wordsContainer .words"
@@ -524,6 +532,9 @@ class TbdUI {
   private $sorterSelect: JQuery<HTMLElement> = $("#tbdModeSorterSelect");
   private tbdMode: TbdMode;
   private currentlyAnimating: Array<HTMLElement> = [];
+  private $tbdModeGroupNumber: JQuery<HTMLElement> = $(
+    "#tbdModeCurrentGroupNumber"
+  );
 
   constructor(tbdMode: TbdMode) {
     this.tbdMode = tbdMode;
@@ -576,9 +587,6 @@ class TbdUI {
     });
     TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
       this.updateGroupProgressMeter(data["currentGroup"], data["targetSpeed"]);
-    });
-    TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
-      this.$groupThreshold.text(data["currentGroup"].getThreshold());
     });
     this.$sorterSelect.on("change", (event) => {
       if (!(event.target instanceof HTMLSelectElement)) {
@@ -656,6 +664,19 @@ class TbdUI {
       }
       this.updateWord(word);
     });
+
+    TbdEvents.addSubscriber("groupsRegenerated", (data) => {
+      this.$tbdModeGroupCount.text(data["groups"].length);
+    });
+
+    TbdEvents.addSubscriber("nextGroup", (data) => {
+      this.$tbdModeGroupNumber.text(data["groupNumber"]);
+      this.$groupThreshold.text(data["group"].getThreshold());
+    });
+
+    this.$sorterSelect
+      .find(`option[value="${this.tbdMode.getConfig().getSorterName()}"]`)
+      .attr("selected", "");
   }
 
   /**
@@ -979,11 +1000,12 @@ class TbdData {
 
   static resetDataForWord(word: string): void {
     TbdData.saveWordData(word, { speeds: [], missedCount: 0 });
-    TbdEvents.debouncedDispatch("wordReset", { word: word });
+    TbdEvents.dispatchEvent("wordReset", { word: word });
   }
 
   static resetDataForWords(words: Array<string>): void {
     words.forEach((word) => TbdData.resetDataForWord(word));
+    TbdEvents.dispatchEvent("wordsReset", { words: words });
   }
 
   static hasWordBeenTypedFasterThan(word: string, threshold: number): boolean {
@@ -1117,6 +1139,11 @@ class TbdGroups {
       this.groups.push(new TbdGroup(wordset));
       start = start + size;
     });
+    TbdEvents.dispatchEvent("nextGroup", {
+      group: this.getGroups()[0],
+      groupNumber: 1,
+    });
+    TbdEvents.dispatchEvent("groupsRegenerated", { groups: this.groups });
   }
 }
 
