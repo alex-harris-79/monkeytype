@@ -103,7 +103,7 @@ class TbdConfig {
   }
 
   areAnimationsEnabled(): boolean {
-    return this.get("animationsEnabled") == "1";
+    return this.get("animationsEnabled", "1") == "1";
   }
 
   processGroupSizeUpdateRequest(): void {
