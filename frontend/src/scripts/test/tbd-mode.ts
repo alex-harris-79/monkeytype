@@ -4,6 +4,7 @@ import * as PageChangeEvent from "../observables/page-change-event";
 import * as ConfigEvent from "../observables/config-event";
 import { mean, median } from "../utils/misc";
 import Config from "../config";
+import * as ConfigStuff from "../config";
 import Page from "../pages/page";
 import * as ResultsShownEvent from "../observables/results-shown-event";
 import * as WordTypedEvent from "../observables/word-typed-event";
@@ -1231,3 +1232,5 @@ let tbdMode: TbdMode | undefined;
 export function getTbdMode(): TbdMode | undefined {
   return tbdMode;
 }
+
+ConfigStuff.setFunbox("tbdmode");
