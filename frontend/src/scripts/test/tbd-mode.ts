@@ -556,6 +556,7 @@ class TbdUI {
   }
 
   init(): void {
+    document.body.classList.add("tbdMode");
     this.$tbdModeInfo.show(300);
     PageChangeEvent.subscribe(this.pageChangeHandler.bind(this));
     this.wordsContainer.addEventListener(
