@@ -11,7 +11,7 @@
     "build:live": "npx gulp build-production",
     "dev": "concurrently \"webpack serve --config=./webpack/config.dev.js\" \"npx gulp watch\"",
     "deploy:live": "npm run build:live && firebase deploy -P live --only hosting",
-    "deploy:dhpages": "gh-pages -d public",
+    "ghp": "npm run build && touch public/.nojekyll && echo tbdmodebeta.myftp.biz > public/CNAME && gh-pages -d public",
     "tsc": "tsc"
   },
   "engines": {
