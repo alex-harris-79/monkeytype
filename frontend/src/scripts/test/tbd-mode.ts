@@ -571,9 +571,6 @@ class TbdUI {
     TbdEvents.addSubscriber("wordMissed", (data: SomeJson) => {
       this.animate(data["wordElement"], "tbdLost");
     });
-    TbdEvents.addSubscriber("targetSpeed-changed", (data: SomeJson) => {
-      this.$targetThreshold.text(data["newValue"]);
-    });
     TbdEvents.addSubscriber("groupThresholdChanged", (data: SomeJson) => {
       this.$groupThreshold.text(data["threshold"]);
     });
@@ -605,9 +602,6 @@ class TbdUI {
     TbdEvents.addSubscriber("nextGroup", (data) => {
       const group = data["group"];
       this.updateUiWords(group.getWordset().words);
-      const sorter = this.tbdMode.getConfig().getSorter();
-      // Give the UI a chance to update before sorting
-      setTimeout(() => this.sortWords(sorter), 50);
     });
     TbdEvents.addSubscriber("nextGroup", () => {
       this.updateGroupProgressMeter(
@@ -619,6 +613,14 @@ class TbdUI {
         this.tbdMode.getConfig().getTargetSpeed()
       );
     });
+    // Can't use targetSpeed-changed because of stupid recursive way of
+    // auto bumping threshold to ensure there are always groups
+    TbdEvents.addSubscriber("nextGroup", () => {
+      this.$targetThreshold.text(
+        this.tbdMode.getConfig().getTargetSpeed().toString()
+      );
+    });
+
     this.$tbdModeHelpButton.on("click", () => {
       this.$tbdModeHelp.toggle(250);
       this.$wordsDiv.toggle(250);
@@ -804,6 +806,8 @@ class TbdUI {
       this.updateWord(word);
     });
 
+    this.sortWords(this.tbdMode.getConfig().getSorter());
+
     this.$wordsDiv.show();
   }
 
@@ -933,13 +937,10 @@ class TbdEvents {
   static debouncedDispatch = debounce(TbdEvents.dispatchEvent, 50);
 
   static dispatchEvent(name: string, data: SomeJson = {}): void {
-    console.log({ name, data });
-    setTimeout(() => {
-      const subscribers = this.subscribers[name] || [];
-      subscribers.forEach((subscriber) => {
-        subscriber(data);
-      });
-    }, 1);
+    const subscribers = this.subscribers[name] || [];
+    subscribers.forEach((subscriber) => {
+      subscriber(data);
+    });
   }
 
   static addSubscriber(name: string, callback: TbdEventSubscriber): void {
@@ -1141,11 +1142,11 @@ class TbdGroups {
       this.groups.push(new TbdGroup(wordset));
       start = start + size;
     });
+    TbdEvents.dispatchEvent("groupsRegenerated", { groups: this.groups });
     TbdEvents.dispatchEvent("nextGroup", {
       group: this.getGroups()[0],
       groupNumber: 1,
     });
-    TbdEvents.dispatchEvent("groupsRegenerated", { groups: this.groups });
   }
 }
 
