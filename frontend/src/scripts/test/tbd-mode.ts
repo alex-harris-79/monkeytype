@@ -7,6 +7,7 @@ import Config from "../config";
 import Page from "../pages/page";
 import * as ResultsShownEvent from "../observables/results-shown-event";
 import * as WordTypedEvent from "../observables/word-typed-event";
+import * as ResetRequestedEvent from "../observables/reset-requested-event";
 import UpdateData = MonkeyTypes.ResultsData;
 import TbdDataType = MonkeyTypes.TbdDataType;
 import TbdWordData = MonkeyTypes.TbdWordData;
@@ -224,6 +225,9 @@ class TbdMode {
     });
     TbdEvents.addSubscriber("nextGroup", (data) => {
       this.currentGroup = data["group"];
+    });
+    TbdEvents.addSubscriber("groupsRegenerated", () => {
+      ResetRequestedEvent.dispatch();
     });
 
     TbdEvents.addSubscriber("actionButtonClicked", (data) => {

@@ -47,6 +47,7 @@ import * as ModesNotice from "../elements/modes-notice";
 import * as PageTransition from "../states/page-transition";
 import * as ConfigEvent from "../observables/config-event";
 import * as TimerEvent from "../observables/timer-event";
+import * as ResetRequestedEvent from "../observables/reset-requested-event";
 import * as Last10Average from "../elements/last-10-average";
 import * as Monkey from "./monkey";
 import { getTbdMode } from "./tbd-mode";
@@ -1724,4 +1725,8 @@ ConfigEvent.subscribe((eventKey, eventValue, nosave) => {
 TimerEvent.subscribe((eventKey, eventValue) => {
   if (eventKey === "fail" && eventValue !== undefined) fail(eventValue);
   if (eventKey === "finish") finish();
+});
+
+ResetRequestedEvent.subscribe(() => {
+  restart();
 });
