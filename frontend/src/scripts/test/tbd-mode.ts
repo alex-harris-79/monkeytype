@@ -222,6 +222,9 @@ class TbdMode {
     TbdEvents.addSubscriber("wordsReset", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
+    TbdEvents.addSubscriber("nextGroup", (data) => {
+      this.currentGroup = data["group"];
+    });
 
     TbdEvents.addSubscriber("actionButtonClicked", (data) => {
       switch (data["actionValue"]) {
@@ -334,10 +337,10 @@ class TbdMode {
 
   recalculateCurrentGroup(): void {
     if (
-      this.currentGroup.getUnbeatenWordset().length > 0 &&
+      this.getCurrentGroup().getUnbeatenWordset().length > 0 &&
       this.getCurrentGroup().getThreshold() <= this.getConfig().getTargetSpeed()
     ) {
-      const index = this.groups.getGroups().indexOf(this.currentGroup);
+      const index = this.groups.getGroups().indexOf(this.getCurrentGroup());
       TbdEvents.dispatchEvent("nextGroup", {
         group: this.getCurrentGroup(),
         groupNumber: index + 1,
@@ -349,7 +352,6 @@ class TbdMode {
       this.getConfig().bumpTargetSpeed(); // side effects, regenerates all groups
       next = this.getFirstIncompleteGroup();
     }
-    this.currentGroup = next;
     const index = this.groups.getGroups().indexOf(this.currentGroup);
     TbdEvents.dispatchEvent("nextGroup", {
       group: this.getCurrentGroup(),
