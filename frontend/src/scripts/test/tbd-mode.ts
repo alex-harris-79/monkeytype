@@ -229,6 +229,23 @@ class TbdMode {
     TbdEvents.addSubscriber("groupsRegenerated", () => {
       ResetRequestedEvent.dispatch();
     });
+    TbdEvents.addSubscriber("nextGroupButtonClicked", () => {
+      if (this.groups.getGroups().length <= 1) {
+        return;
+      }
+      const currentGroupIndex = this.getCurrentGroupIndex();
+      let nextIndex = currentGroupIndex + 1;
+
+      // Allow cycling through groups
+      if (nextIndex == this.groups.getGroups().length) {
+        nextIndex = 0;
+      }
+
+      TbdEvents.dispatchEvent("nextGroup", {
+        group: this.groups.getGroups()[nextIndex],
+        groupNumber: nextIndex + 1,
+      });
+    });
 
     TbdEvents.addSubscriber("actionButtonClicked", (data) => {
       switch (data["actionValue"]) {
@@ -344,7 +361,7 @@ class TbdMode {
       this.getCurrentGroup().getUnbeatenWordset().length > 0 &&
       this.getCurrentGroup().getThreshold() <= this.getConfig().getTargetSpeed()
     ) {
-      const index = this.groups.getGroups().indexOf(this.getCurrentGroup());
+      const index = this.getCurrentGroupIndex();
       TbdEvents.dispatchEvent("nextGroup", {
         group: this.getCurrentGroup(),
         groupNumber: index + 1,
@@ -361,6 +378,10 @@ class TbdMode {
       group: next,
       groupNumber: index + 1,
     });
+  }
+
+  getCurrentGroupIndex(): number {
+    return this.groups.getGroups().indexOf(this.getCurrentGroup());
   }
 
   getMonkeyTypeWordset(): Wordset {
@@ -534,6 +555,8 @@ class TbdUI {
     "#tbdModeUpdateConfigSettingsUpdateButton"
   );
 
+  private $tbdNextGroupButton: JQuery<HTMLElement> = $("#tbdNextGroupButton");
+
   private wordsContainer: HTMLDivElement;
   private $sorterSelect: JQuery<HTMLElement> = $("#tbdModeSorterSelect");
   private tbdMode: TbdMode;
@@ -641,6 +664,9 @@ class TbdUI {
     this.$tbdLostExample.on("click", (event) => {
       this.animate(event.target, "tbdLost");
     });
+    this.$tbdNextGroupButton.on("click", () => {
+      TbdEvents.dispatchEvent("nextGroupButtonClicked");
+    });
 
     this.$targetThreshold.text(this.tbdMode.getConfig().getTargetSpeed());
     this.$groupThreshold.text(this.tbdMode.getCurrentGroup().getThreshold());
@@ -686,6 +712,14 @@ class TbdUI {
     TbdEvents.addSubscriber("nextGroup", (data) => {
       this.$tbdModeGroupNumber.text(data["groupNumber"]);
       this.$groupThreshold.text(data["group"].getThreshold());
+    });
+
+    TbdEvents.addSubscriber("groupsRegenerated", (data) => {
+      if (data["groups"].length == 1) {
+        this.$tbdNextGroupButton.hide();
+      } else {
+        this.$tbdNextGroupButton.show();
+      }
     });
 
     this.$sorterSelect
