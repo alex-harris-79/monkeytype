@@ -257,7 +257,7 @@ class TbdMode {
     if (!isCorrect) {
       return;
     }
-    const wordElement = currentWordElement[0];
+    const wordElement = currentWordElement;
     const typedAboveTarget = burst > this.getConfig().getTargetSpeed();
     if (typedAboveTarget) {
       TbdEvents.dispatchEvent("wordTypedCorrectly", { wordElement });
@@ -571,10 +571,15 @@ class TbdUI {
       return this.$wordInfo.hide(0);
     });
     TbdEvents.addSubscriber("wordTypedCorrectly", (data: SomeJson) => {
-      this.animate(data["wordElement"], "tbdBeaten");
+      data["wordElement"]
+        .children("letter")
+        .each((_index: number, element: HTMLElement) => {
+          this.animate(element, "tbdBeaten");
+        });
     });
     TbdEvents.addSubscriber("wordMissed", (data: SomeJson) => {
-      this.animate(data["wordElement"], "tbdLost");
+      data["wordElement"].addClass("tbdLowOpacity");
+      this.animate(data["wordElement"][0], "tbdLost");
     });
     TbdEvents.addSubscriber("groupThresholdChanged", (data: SomeJson) => {
       this.$groupThreshold.text(data["threshold"]);

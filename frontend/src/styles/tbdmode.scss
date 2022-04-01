@@ -1,9 +1,6 @@
 body.tbdMode {
-  // Replace margin with some padding (by no means exact) for
-  // more pleasing background animations
   #words > .word {
-    padding: 4px 6px;
-    margin: 0;
+    transition: opacity 1s;
   }
 }
 
@@ -200,20 +197,23 @@ body.tbdMode {
 }
 
 @keyframes tbdBeaten {
-  50% {
-    background-color: var(--main-color);
+  10% {
+    color: var(--main-color);
   }
 }
 .tbdBeaten {
-  animation: tbdBeaten 1s;
+  animation: tbdBeaten 5s ease-out;
 }
 
 @keyframes tbdLost {
   50% {
-    background-color: var(--error-color);
     transform: translateY(13%);
   }
 }
 .tbdLost {
   animation: tbdLost 1s;
+}
+
+.tbdLowOpacity {
+  opacity: 0.2;
 }
