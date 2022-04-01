@@ -67,6 +67,13 @@ body.tbdMode {
 
   .wordsContainer {
     #tbdHelp {
+      #tbdCloseHelp {
+        position: sticky;
+        right: 0;
+        top: 20px;
+        text-align: right;
+        font-size: 1.75rem;
+      }
       .tbdBeatenExample,
       .tbdLostExample {
         border-bottom: 1px dashed var(--main-color);
