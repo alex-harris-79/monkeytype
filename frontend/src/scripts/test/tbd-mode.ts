@@ -246,6 +246,23 @@ class TbdMode {
         groupNumber: nextIndex + 1,
       });
     });
+    TbdEvents.addSubscriber("previousGroupButtonClicked", () => {
+      if (this.groups.getGroups().length <= 1) {
+        return;
+      }
+      const currentGroupIndex = this.getCurrentGroupIndex();
+      let nextIndex = currentGroupIndex - 1;
+
+      // Allow cycling through groups
+      if (nextIndex == -1) {
+        nextIndex = this.groups.getGroups().length - 1;
+      }
+
+      TbdEvents.dispatchEvent("nextGroup", {
+        group: this.groups.getGroups()[nextIndex],
+        groupNumber: nextIndex + 1,
+      });
+    });
 
     TbdEvents.addSubscriber("actionButtonClicked", (data) => {
       switch (data["actionValue"]) {
@@ -564,6 +581,9 @@ class TbdUI {
   );
 
   private $tbdNextGroupButton: JQuery<HTMLElement> = $("#tbdNextGroupButton");
+  private $tbdPreviousGroupButton: JQuery<HTMLElement> = $(
+    "#tbdPreviousGroupButton"
+  );
 
   private wordsContainer: HTMLDivElement;
   private $sorterSelect: JQuery<HTMLElement> = $("#tbdModeSorterSelect");
@@ -675,6 +695,9 @@ class TbdUI {
     this.$tbdNextGroupButton.on("click", () => {
       TbdEvents.dispatchEvent("nextGroupButtonClicked");
     });
+    this.$tbdPreviousGroupButton.on("click", () => {
+      TbdEvents.dispatchEvent("previousGroupButtonClicked");
+    });
 
     this.$targetThreshold.text(this.tbdMode.getConfig().getTargetSpeed());
     this.$groupThreshold.text(this.tbdMode.getCurrentGroup().getThreshold());
@@ -725,8 +748,10 @@ class TbdUI {
     TbdEvents.addSubscriber("groupsRegenerated", (data) => {
       if (data["groups"].length == 1) {
         this.$tbdNextGroupButton.hide();
+        this.$tbdPreviousGroupButton.hide();
       } else {
         this.$tbdNextGroupButton.show();
+        this.$tbdPreviousGroupButton.show();
       }
     });
 
