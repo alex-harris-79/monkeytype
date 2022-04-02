@@ -1,35 +1,60 @@
 body.tbdMode {
-  // Replace margin with some padding (by no means exact) for
-  // more pleasing background animations
-  #words > .word,
-  .tbdBeatenExample,
-  .tbdLostExample {
-    padding: 4px 6px;
-    margin: 0;
+  #words > .word {
+    transition: opacity 1s;
   }
 }
 
 #tbdmodeInfo {
-  height: 40vh;
-  overflow: scroll;
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  height: 50vh;
 
   & > * {
-    margin-top: 1.5rem;
+    margin-top: 0.5rem;
   }
+
+  #tbdModeTargetSpeed {
+    text-align: center;
+  }
+
+  #tbdModeConfig {
+    display: flex;
+    flex-flow: row;
+  }
+
+  .tbdProgressCounts {
+    margin-top: 0;
+    font-size: 0.8rem;
+  }
+
   #tbdModeProgress {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-top: 0;
 
     .progressMeterContainer {
+      position: relative;
       flex-grow: 100;
       background-color: var(--sub-color);
+      margin-bottom: 2rem;
+
+      .count {
+        font-size: 0.8rem;
+      }
+
+      .tbdTotalWordCount,
+      .tbdGroupTotalCount {
+        position: absolute;
+        text-align: left;
+        width: 4rem;
+        right: -4.3rem;
+      }
+
+      .tbdTotalWordCount {
+        top: -1.5rem;
+      }
+      .tbdGroupTotalCount {
+        bottom: -1.5rem;
+      }
     }
 
     .threshold {
@@ -48,6 +73,11 @@ body.tbdMode {
     .progressMeterTotal {
       background-color: var(--main-color);
       height: 1rem;
+      .tbdTotalCompleteCount {
+        position: absolute;
+        right: 0;
+        top: -1.5rem;
+      }
     }
 
     .progressMeterGroup {
@@ -62,11 +92,33 @@ body.tbdMode {
         background-color: var(--main-color);
         opacity: 0.4;
       }
+      .tbdGroupCompleteCount {
+        position: absolute;
+        right: 0;
+        top: 0.9rem;
+      }
     }
   }
 
   .wordsContainer {
+    margin-bottom: 3rem;
+
     #tbdHelp {
+      max-height: 25vh;
+      overflow: scroll;
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      &::-webkit-scrollbar {
+        display: none;
+      }
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
+      #tbdCloseHelp {
+        position: sticky;
+        right: 0;
+        top: 20px;
+        text-align: right;
+        font-size: 1.75rem;
+      }
       .tbdBeatenExample,
       .tbdLostExample {
         border-bottom: 1px dashed var(--main-color);
@@ -105,6 +157,14 @@ body.tbdMode {
     .words {
       display: flex;
       flex-wrap: wrap;
+      max-height: 20vh;
+      overflow: scroll;
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      &::-webkit-scrollbar {
+        display: none;
+      }
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
     }
 
     .tbdWordContainer {
@@ -126,11 +186,6 @@ body.tbdMode {
         border-bottom: 1px dashed var(--sub-color);
       }
 
-      &[data-beaten-at-group="1"] > .tbdWord {
-        color: var(--text-color);
-        font-weight: bold;
-      }
-
       &[data-beaten-at-target="1"] > .tbdWord {
         color: var(--main-color);
         font-weight: bold;
@@ -145,18 +200,24 @@ body.tbdMode {
   #tbdModeStats {
     display: flex;
     justify-content: space-evenly;
+
+    .tbdConfigValue {
+      cursor: pointer;
+      border-bottom: 1px dashed var(--main-color);
+    }
   }
 
   #tbdModeWordInfo {
-    opacity: 1;
     color: var(--text-color);
     background-color: var(--bg-color);
     z-index: 1000; // 1 above the out of focus warning
     padding: 0.5rem 1rem;
-    position: fixed;
+    position: absolute;
+    margin: 0 auto;
     border: 1px solid var(--text-color);
-    bottom: 45vh;
-    right: 43vw;
+    top: -16rem;
+    left: 0;
+    right: 0;
     height: fit-content;
     width: fit-content;
     font-weight: normal;
@@ -187,35 +248,43 @@ body.tbdMode {
   }
 
   #tbdModeControls {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
     & > * {
       display: inline-block;
     }
+
     .spacer {
       color: var(--caret-color);
     }
-    select {
-      background-color: var(--bg-color);
-      color: var(--main-color);
-      padding: 0.2rem;
-    }
+  }
+  select {
+    background-color: var(--bg-color);
+    color: var(--main-color);
+    padding: 0.2rem;
   }
 }
 
 @keyframes tbdBeaten {
-  50% {
-    background-color: var(--main-color);
+  10% {
+    color: var(--main-color);
   }
 }
 .tbdBeaten {
-  animation: tbdBeaten 1s;
+  animation: tbdBeaten 5s ease-out;
 }
 
 @keyframes tbdLost {
   50% {
-    background-color: var(--error-color);
     transform: translateY(13%);
   }
 }
 .tbdLost {
   animation: tbdLost 1s;
+}
+
+.tbdLowOpacity {
+  opacity: 0.2;
 }
