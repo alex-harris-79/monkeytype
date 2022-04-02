@@ -4881,84 +4881,25 @@
         <div id="tbdmodeInfo" style="display: none">
           <div id="tbdModeProgress">
             <div class="tbdmode progressMeterContainer">
-              <div class="tbdmode progressMeterTotal"></div>
-              <div class="tbdmode progressMeterGroup"></div>
-            </div>
-            <div
-              class="tbdmode threshold nextThreshold"
-              title="Next threshold"
-            ></div>
-          </div>
-          <div id="tbdModeControls" class="tbdmode controls">
-            <select id="tbdModeConfigSettings">
-              <option value="">-- Config Options --</option>
-              <option value="targetSpeed">Target Speed</option>
-              <option value="groupSize">Group Size</option>
-              <option value="unbeatenWordPercentage">Unbeaten Word %</option>
-              <option value="animations">Animations On/Off</option>
-            </select>
-            <div
-              class="text-button"
-              id="tbdModeUpdateConfigSettingsUpdateButton"
-            >
-              Set
-            </div>
-            <div class="spacer">|</div>
-            <select id="tbdModeActionsSelect">
-              <option value="">-- Actions --</option>
-              <option value="resetCurrentWords">Reset Current Words</option>
-              <option value="resetAllWords">Reset ALL Words</option>
-              <option value="copyAllData">Export Data</option>
-              <option value="importData">Import Data</option>
-            </select>
-            <div class="text-button" id="tbdModeActionButton">Go</div>
-            <div class="spacer">|</div>
-            <span>Sort By</span>
-            <select id="tbdModeSorterSelect">
-              <option value="alphabetical-asc">Alphabetically Ascending</option>
-              <option value="alphabetical-desc">
-                Alphabetically Descending
-              </option>
-              <option value="speed-desc">Speed Descending</option>
-              <option value="speed-asc">Speed Ascending</option>
-              <option value="typedCount">Typed Count</option>
-              <option value="missedCount">Missed Count</option>
-            </select>
-            <div class="spacer">|</div>
-            <div class="text-button tbdModeHelpButton">Help</div>
-          </div>
-          <div id="tbdModeStats">
-            <div>
-              <span>Group</span>
-              <span id="tbdModeCurrentGroupNumber"></span>
-              <span>of</span>
-              <span id="tbdModeGroupCount"></span>
-              <span
-                id="tbdNextGroupButton"
-                class="text-button"
-                title="Skip to next group"
-              >
-                →️
-              </span>
-            </div>
-            <div>
-              <span>Group Threshold:</span>
-              <span id="tbdModeGroupThreshold"></span>
-            </div>
-            <div>
-              <span>Target Speed:</span>
-              <span id="tbdModeTargetThreshold"></span>
+              <div id="tbdModeWordInfo"></div>
+              <span class="count tbdTotalWordCount"></span>
+              <span class="count tbdGroupTotalCount"></span>
+              <div class="tbdmode progressMeterTotal">
+                <span class="count tbdTotalCompleteCount"></span>
+              </div>
+              <div class="tbdmode progressMeterGroup">
+                <span class="count tbdGroupCompleteCount"></span>
+              </div>
             </div>
           </div>
           <div id="tbdModeWordsContainer" class="tbdMode wordsContainer">
-            <div id="tbdModeWordInfo"></div>
             <div id="tbdHelp" style="display: none">
-              <div id="tbdCloseHelp">
-                <span class="tbdModeHelpButton text-button" title="Close Help">
-                  𝖷
-                </span>
-              </div>
+              <div id="tbdCloseHelp"></div>
               <h2>TBD Mode</h2>
+              <p>
+                I'm making lots of changes right now so a lot of this
+                information is out of date!
+              </p>
               <p>
                 This mode is designed to help you target your efforts on the
                 words you have the most trouble with.
@@ -5219,9 +5160,75 @@
                 <li>You smell</li>
                 <li>JK you're great. Thanks for trying my funbox mode!</li>
               </ul>
-              <div class="button tbdModeHelpButton">Close Help</div>
             </div>
             <div class="words"></div>
+          </div>
+          <div id="tbdModeStats">
+            <div>
+              <span>Group Size:</span>
+              <span
+                id="tbdModeGroupSize"
+                class="tbdConfigValue"
+                data-key="groupSize"
+              ></span>
+            </div>
+            <div>
+              <span
+                id="tbdPreviousGroupButton"
+                class="text-button"
+                title="Skip to previous group"
+              >
+                ←️
+              </span>
+              <span>Group</span>
+              <span id="tbdModeCurrentGroupNumber"></span>
+              <span>of</span>
+              <span id="tbdModeGroupCount"></span>
+              <span
+                id="tbdNextGroupButton"
+                class="text-button"
+                title="Skip to next group"
+              >
+                →️
+              </span>
+            </div>
+            <div>
+              <span>Target Speed:</span>
+              <span
+                id="tbdModeTargetSpeed"
+                class="tbdConfigValue"
+                data-key="targetSpeed"
+              ></span>
+            </div>
+            <select id="tbdModeSorterSelect">
+              <option value="alphabetical-asc">Alphabetically Ascending</option>
+              <option value="alphabetical-desc">
+                Alphabetically Descending
+              </option>
+              <option value="speed-desc">Speed Descending</option>
+              <option value="speed-asc">Speed Ascending</option>
+              <option value="typedCount">Typed Count</option>
+              <option value="missedCount">Missed Count</option>
+            </select>
+          </div>
+          <div id="tbdModeControls" class="tbdmode controls">
+            <button class="button tbdModeHelpButton"></button>
+            <button
+              class="tbdModeAction button"
+              data-action="resetCurrentWords"
+            >
+              Reset Current Words
+            </button>
+            <button class="tbdModeAction button" data-action="resetAllWords">
+              Reset ALL Words
+            </button>
+            <button class="tbdModeAction button" data-action="copyAllData">
+              Export data to clipboard
+            </button>
+            <button class="tbdModeAction button" data-action="importData">
+              Import data
+            </button>
+            <button class="button" id="tbdToggleAnimationsButton"></button>
           </div>
         </div>
         <div id="bottom">
@@ -5329,7 +5336,7 @@
         </div>
       </div>
     </div>
-  <script defer src="./js/vendor.0921e426.js"></script><script defer src="./js/monkeytype.ff17cf7e.js"></script></body>
+  <script defer src="./js/vendor.0921e426.js"></script><script defer src="./js/monkeytype.3f395137.js"></script></body>
   <!-- Global site tag (gtag.js) - Google Analytics -->
   <script
     async
