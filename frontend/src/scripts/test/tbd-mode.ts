@@ -33,9 +33,6 @@ class TbdConfig {
         case "animations":
           this.processAnimationToggleRequest();
           break;
-        case "unbeatenWordPercentage":
-          this.processUnbeatenWordPercentageRequest();
-          break;
       }
     });
   }
@@ -113,25 +110,6 @@ class TbdConfig {
     if (newSize > 0) {
       this.set("groupSize", newSize.toString());
     }
-  }
-
-  processUnbeatenWordPercentageRequest(): void {
-    const newPercentage = parseInt(
-      prompt(
-        `The odds (still random) that a test word will be one that hasn't been typed faster than the current group threshold. 
-        
-        Must be between 10-90`,
-        this.getUnbeatenWordPercentage().toString()
-      ) || ""
-    );
-    if (isNaN(newPercentage)) {
-      return;
-    }
-    if (newPercentage < 10 || newPercentage > 90) {
-      alert(`${newPercentage} isn't a valid choice.`);
-      return;
-    }
-    this.set("unbeatenWordPercentage", newPercentage.toString());
   }
 }
 
