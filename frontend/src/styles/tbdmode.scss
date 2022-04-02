@@ -11,25 +11,46 @@ body.tbdMode {
 
 #tbdmodeInfo {
   height: 40vh;
-  overflow: scroll;
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
 
   & > * {
     margin-top: 1.5rem;
   }
+
+  .tbdProgressCounts {
+    margin-top: 0;
+    font-size: 0.8rem;
+  }
+
   #tbdModeProgress {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-top: 0;
 
     .progressMeterContainer {
+      position: relative;
       flex-grow: 100;
       background-color: var(--sub-color);
+      margin-bottom: 2rem;
+
+      .count {
+        font-size: 0.8rem;
+      }
+
+      .tbdTotalWordCount,
+      .tbdGroupTotalCount {
+        position: absolute;
+        text-align: left;
+        width: 4rem;
+        right: -4.3rem;
+      }
+
+      .tbdTotalWordCount {
+        top: -1.5rem;
+      }
+      .tbdGroupTotalCount {
+        bottom: -1.5rem;
+      }
     }
 
     .threshold {
@@ -48,6 +69,11 @@ body.tbdMode {
     .progressMeterTotal {
       background-color: var(--main-color);
       height: 1rem;
+      .tbdTotalCompleteCount {
+        position: absolute;
+        right: 0;
+        top: -1.5rem;
+      }
     }
 
     .progressMeterGroup {
@@ -62,11 +88,24 @@ body.tbdMode {
         background-color: var(--main-color);
         opacity: 0.4;
       }
+      .tbdGroupCompleteCount {
+        position: absolute;
+        right: 0;
+        top: 0.9rem;
+      }
     }
   }
 
   .wordsContainer {
     #tbdHelp {
+      max-height: 25vh;
+      overflow: scroll;
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      &::-webkit-scrollbar {
+        display: none;
+      }
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
       #tbdCloseHelp {
         position: sticky;
         right: 0;
@@ -112,6 +151,14 @@ body.tbdMode {
     .words {
       display: flex;
       flex-wrap: wrap;
+      max-height: 30vh;
+      overflow: scroll;
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      &::-webkit-scrollbar {
+        display: none;
+      }
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
     }
 
     .tbdWordContainer {
