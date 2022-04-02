@@ -873,17 +873,10 @@ class TbdUI {
   updateWord(word: string): void {
     const wordElement = this.getOrCreateWordElement(word);
     const targetSpeed = this.tbdMode.getConfig().getTargetSpeed();
-    const groupSpeed = this.tbdMode.getCurrentGroup().getThreshold();
     // Timeout ensures transitions work
     setTimeout(() => {
       wordElement.dataset["beatenAtTarget"] =
         TbdData.hasWordBeenTypedFasterThan(word, targetSpeed) ? "1" : "0";
-      wordElement.dataset["beatenAtGroup"] = TbdData.hasWordBeenTypedFasterThan(
-        word,
-        groupSpeed
-      )
-        ? "1"
-        : "0";
       wordElement.dataset["typed"] =
         TbdData.getSpeedsForWord(word).length == 0 ? "0" : "1";
       wordElement.dataset["missedMore"] =
