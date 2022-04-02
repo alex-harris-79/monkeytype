@@ -1248,7 +1248,7 @@ class TbdGroup {
   }
 
   bumpThreshold(): void {
-    this.threshold += 1;
+    this.threshold += 10;
     TbdEvents.dispatchEvent("groupThresholdChanged", {
       threshold: this.threshold,
     });
