@@ -419,8 +419,6 @@ class TbdMode {
 
     TbdEvents.dispatchEvent("resultsProcessed", {
       currentGroup: this.getCurrentGroup(),
-      monkeyTypeWordset: this.monkeyTypeWordset,
-      targetSpeed: this.config.getTargetSpeed(),
     });
   }
 
@@ -610,15 +608,6 @@ class TbdUI {
       const group: TbdGroup = data["currentGroup"];
       this.updateUiWords(group.getWordset().words);
     });
-    TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
-      this.updateTotalProgressMeter(
-        data["monkeyTypeWordset"],
-        data["targetSpeed"]
-      );
-    });
-    TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
-      this.updateGroupProgressMeter(data["currentGroup"], data["targetSpeed"]);
-    });
     this.$sorterSelect.on("change", (event) => {
       if (!(event.target instanceof HTMLSelectElement)) {
         return;
@@ -635,7 +624,7 @@ class TbdUI {
       const group = data["group"];
       this.updateUiWords(group.getWordset().words);
     });
-    TbdEvents.addSubscriber("nextGroup", () => {
+    TbdEvents.addSubscriber(["nextGroup", "resultsProcessed"], () => {
       this.updateGroupProgressMeter(
         this.tbdMode.getCurrentGroup(),
         this.tbdMode.getConfig().getTargetSpeed()
