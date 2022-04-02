@@ -10,10 +10,19 @@ body.tbdMode {
 }
 
 #tbdmodeInfo {
-  height: 40vh;
+  height: 50vh;
 
   & > * {
-    margin-top: 1.5rem;
+    margin-top: 0.5rem;
+  }
+
+  #tbdModeTargetSpeed {
+    text-align: center;
+  }
+
+  #tbdModeConfig {
+    display: flex;
+    flex-flow: row;
   }
 
   .tbdProgressCounts {
@@ -97,6 +106,8 @@ body.tbdMode {
   }
 
   .wordsContainer {
+    margin-bottom: 3rem;
+
     #tbdHelp {
       max-height: 25vh;
       overflow: scroll;
@@ -151,7 +162,7 @@ body.tbdMode {
     .words {
       display: flex;
       flex-wrap: wrap;
-      max-height: 30vh;
+      max-height: 20vh;
       overflow: scroll;
       /* Hide scrollbar for Chrome, Safari and Opera */
       &::-webkit-scrollbar {
@@ -194,18 +205,24 @@ body.tbdMode {
   #tbdModeStats {
     display: flex;
     justify-content: space-evenly;
+
+    .tbdConfigValue {
+      cursor: pointer;
+      border-bottom: 1px dashed var(--main-color);
+    }
   }
 
   #tbdModeWordInfo {
-    opacity: 1;
     color: var(--text-color);
     background-color: var(--bg-color);
     z-index: 1000; // 1 above the out of focus warning
     padding: 0.5rem 1rem;
-    position: fixed;
+    position: absolute;
+    margin: 0 auto;
     border: 1px solid var(--text-color);
-    bottom: 45vh;
-    right: 43vw;
+    top: -16rem;
+    left: 0;
+    right: 0;
     height: fit-content;
     width: fit-content;
     font-weight: normal;
@@ -236,17 +253,22 @@ body.tbdMode {
   }
 
   #tbdModeControls {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
     & > * {
       display: inline-block;
     }
+
     .spacer {
       color: var(--caret-color);
     }
-    select {
-      background-color: var(--bg-color);
-      color: var(--main-color);
-      padding: 0.2rem;
-    }
+  }
+  select {
+    background-color: var(--bg-color);
+    color: var(--main-color);
+    padding: 0.2rem;
   }
 }
 
