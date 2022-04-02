@@ -35,6 +35,14 @@ class TbdConfig {
           break;
       }
     });
+
+    TbdEvents.addSubscriber("toggleAnimationButtonClicked", () => {
+      if (this.areAnimationsEnabled()) {
+        this.set("animationsEnabled", "0");
+      } else {
+        this.set("animationsEnabled", "1");
+      }
+    });
   }
 
   get(key: string, defaultValue = ""): string {
@@ -508,7 +516,7 @@ class TbdMode {
 }
 
 class TbdUI {
-  private $groupThreshold: JQuery<HTMLElement> = $("#tbdModeGroupThreshold");
+  private $extra: JQuery<HTMLDivElement> = $("#tbdExtra");
   private $tbdModeGroupCount: JQuery<HTMLElement> = $("#tbdModeGroupCount");
   private $wordInfo: JQuery<HTMLElement> = $("#tbdModeWordInfo");
   private $wordsDiv: JQuery<HTMLElement> = $(
@@ -525,7 +533,8 @@ class TbdUI {
     ".tbdGroupCompleteCount"
   );
   private $groupTotalCount: JQuery<HTMLElement> = $(".tbdGroupTotalCount");
-  private $targetThreshold: JQuery<HTMLElement> = $("#tbdModeTargetThreshold");
+  private $targetSpeed: JQuery<HTMLElement> = $("#tbdModeTargetSpeed");
+  private $groupSize: JQuery<HTMLElement> = $("#tbdModeGroupSize");
   private $progressMeterGroup: JQuery<HTMLElement> = $(
     "#tbdmodeInfo .progressMeterGroup"
   );
@@ -535,11 +544,12 @@ class TbdUI {
   private $tbdBeatenExample: JQuery<HTMLElement> = $(".tbdBeatenExample");
   private $tbdLostExample: JQuery<HTMLElement> = $(".tbdLostExample");
 
-  private $tbdModeActionsSelect: JQuery<HTMLSelectElement> = $(
-    "#tbdModeActionsSelect"
+  private $tbdModeActionButtons: JQuery<HTMLElement> = $(
+    ".tbdModeAction[data-action]"
   );
-  private $tbdModeActionsButton: JQuery<HTMLElement> = $(
-    "#tbdModeActionButton"
+
+  private $tbdToggleAnimationsButton: JQuery<HTMLButtonElement> = $(
+    "#tbdToggleAnimationsButton"
   );
 
   private $tbdModeConfigSettingsSelect: JQuery<HTMLElement> = $(
@@ -576,6 +586,8 @@ class TbdUI {
     this.$tbdModeInfo.hide();
   }
 
+  private $toggleConfig: JQuery<HTMLElement> = $(".tbdToggleConfig");
+
   init(): void {
     document.body.classList.add("tbdMode");
     this.$tbdModeInfo.show(300);
@@ -601,9 +613,6 @@ class TbdUI {
     TbdEvents.addSubscriber("wordMissed", (data: SomeJson) => {
       data["wordElement"].addClass("tbdLowOpacity");
       this.animate(data["wordElement"][0], "tbdLost");
-    });
-    TbdEvents.addSubscriber("groupThresholdChanged", (data: SomeJson) => {
-      this.$groupThreshold.text(data["threshold"]);
     });
     TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
       const group: TbdGroup = data["currentGroup"];
@@ -646,12 +655,23 @@ class TbdUI {
     // Can't use targetSpeed-changed because of stupid recursive way of
     // auto bumping threshold to ensure there are always groups
     TbdEvents.addSubscriber("nextGroup", () => {
-      this.$targetThreshold.text(
+      this.$targetSpeed.text(
         this.tbdMode.getConfig().getTargetSpeed().toString()
       );
     });
 
+    TbdEvents.addSubscriber("groupSize-changed", () => {
+      this.$groupSize.text(this.tbdMode.getConfig().getGroupSize());
+    });
+
+    const defaultHelpButtonText = "Show Help";
+    this.$tbdModeHelpButton.text(defaultHelpButtonText);
     this.$tbdModeHelpButton.on("click", () => {
+      const newText =
+        this.$tbdModeHelpButton.text() == defaultHelpButtonText
+          ? "Close Help"
+          : defaultHelpButtonText;
+      this.$tbdModeHelpButton.text(newText);
       this.$tbdModeHelp.toggle(250);
       this.$wordsDiv.toggle(250);
     });
@@ -668,8 +688,8 @@ class TbdUI {
       TbdEvents.dispatchEvent("previousGroupButtonClicked");
     });
 
-    this.$targetThreshold.text(this.tbdMode.getConfig().getTargetSpeed());
-    this.$groupThreshold.text(this.tbdMode.getCurrentGroup().getThreshold());
+    this.$targetSpeed.text(this.tbdMode.getConfig().getTargetSpeed());
+    this.$groupSize.text(this.tbdMode.getConfig().getGroupSize());
 
     this.$tbdModeConfigSettingsUpdateButton.on("click", () => {
       const selectValue = this.$tbdModeConfigSettingsSelect.val();
@@ -682,15 +702,28 @@ class TbdUI {
       }
     });
 
-    this.$tbdModeActionsButton.on("click", () => {
-      const selectValue = this.$tbdModeActionsSelect.val();
-      if (selectValue == "") {
-        alert("Select an option from the dropdown first");
-      } else {
-        TbdEvents.dispatchEvent("actionButtonClicked", {
-          actionValue: selectValue,
-        });
+    $(".tbdConfigValue").on("click", (event) => {
+      if (!(event.target instanceof HTMLElement)) {
+        return;
       }
+      TbdEvents.dispatchEvent("configUpdateRequested", {
+        configSetting: event.target.dataset["key"],
+      });
+    });
+
+    this.$tbdModeActionButtons.on("click", (event) => {
+      const $element = $(event.target);
+      TbdEvents.dispatchEvent("actionButtonClicked", {
+        actionValue: $element.data("action"),
+      });
+    });
+
+    this.updateToggleAnimationsButtonText();
+    this.$tbdToggleAnimationsButton.on("click", () => {
+      TbdEvents.dispatchEvent("toggleAnimationButtonClicked");
+    });
+    TbdEvents.addSubscriber("animationsEnabled-changed", () => {
+      this.updateToggleAnimationsButtonText();
     });
 
     TbdEvents.addSubscriber("wordSaved", (data) => {
@@ -711,7 +744,6 @@ class TbdUI {
 
     TbdEvents.addSubscriber("nextGroup", (data) => {
       this.$tbdModeGroupNumber.text(data["groupNumber"]);
-      this.$groupThreshold.text(data["group"].getThreshold());
     });
 
     TbdEvents.addSubscriber("groupsRegenerated", (data) => {
@@ -727,6 +759,24 @@ class TbdUI {
     this.$sorterSelect
       .find(`option[value="${this.tbdMode.getConfig().getSorterName()}"]`)
       .attr("selected", "");
+
+    const defaultText = "More";
+    this.$toggleConfig.text(defaultText);
+    this.$toggleConfig.on("click", () => {
+      this.$wordsDiv.toggle(200);
+      this.$extra.toggle(200);
+      const newText =
+        this.$toggleConfig.text() == defaultText ? "Close" : defaultText;
+      this.$toggleConfig.text(newText);
+    });
+  }
+
+  updateToggleAnimationsButtonText(): void {
+    this.$tbdToggleAnimationsButton.text(
+      this.tbdMode.getConfig().areAnimationsEnabled()
+        ? "Disable Animations"
+        : "Enable Animations"
+    );
   }
 
   /**
@@ -969,7 +1019,6 @@ class TbdUI {
     }
     wordInfoHtml += `<div class="helpText">click to reset word data</div>`;
     this.$wordInfo.html(wordInfoHtml);
-    this.getOrCreateWordElement(word).append(this.$wordInfo[0]);
     this.$wordInfo.show(200);
   }
 }
@@ -1223,9 +1272,6 @@ class TbdGroup {
 
   bumpThreshold(): void {
     this.threshold += 10;
-    TbdEvents.dispatchEvent("groupThresholdChanged", {
-      threshold: this.threshold,
-    });
   }
 
   getUnbeatenWordset(): Wordset {
