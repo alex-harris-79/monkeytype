@@ -8,10 +8,10 @@ import Page from "../pages/page";
 import * as ResultsShownEvent from "../observables/results-shown-event";
 import * as WordTypedEvent from "../observables/word-typed-event";
 import * as ResetRequestedEvent from "../observables/reset-requested-event";
+import { debounce } from "../utils/debounce";
 import UpdateData = MonkeyTypes.ResultsData;
 import TbdDataType = MonkeyTypes.TbdDataType;
 import TbdWordData = MonkeyTypes.TbdWordData;
-import { debounce } from "../utils/debounce";
 
 type WordSorter = (word: string, word2: string) => number;
 type SomeJson = { [key: string]: any };
@@ -561,6 +561,7 @@ class TbdUI {
   private $tbdModeGroupNumber: JQuery<HTMLElement> = $(
     "#tbdModeCurrentGroupNumber"
   );
+  private slowestSpeedInCurrentGroup = 0;
 
   constructor(tbdMode: TbdMode) {
     this.tbdMode = tbdMode;
@@ -606,6 +607,10 @@ class TbdUI {
     });
     TbdEvents.addSubscriber("resultsProcessed", (data: SomeJson) => {
       const group: TbdGroup = data["currentGroup"];
+      const speeds = group
+        .getWordset()
+        .words.map((word) => TbdData.getMedianSpeedForWord(word));
+      this.slowestSpeedInCurrentGroup = Math.min(...speeds);
       this.updateUiWords(group.getWordset().words);
     });
     this.$sorterSelect.on("change", (event) => {
@@ -622,6 +627,10 @@ class TbdUI {
     );
     TbdEvents.addSubscriber("nextGroup", (data) => {
       const group = data["group"];
+      const speeds = group
+        .getWordset()
+        .words.map((word: string) => TbdData.getMedianSpeedForWord(word));
+      this.slowestSpeedInCurrentGroup = Math.min(...speeds);
       this.updateUiWords(group.getWordset().words);
     });
     TbdEvents.addSubscriber(["nextGroup", "resultsProcessed"], () => {
@@ -866,14 +875,18 @@ class TbdUI {
         TbdData.getSpeedsForWord(word).length
           ? "1"
           : "0";
-      const percentComplete = TbdData.getMedianSpeedForWord(word) / targetSpeed;
-      const modifier = Math.min(percentComplete, 1);
-      const baseScale = 0.75;
-      const additional = (1 - baseScale) * modifier;
+      const rangeRemaining = targetSpeed - this.slowestSpeedInCurrentGroup;
+      const remainingForWord =
+        targetSpeed - TbdData.getMedianSpeedForWord(word);
+      const percentRemaining = remainingForWord / rangeRemaining;
+      const modifier = Math.max(percentRemaining, 0);
+      const base = 1.0;
+      const scaleToRemove = modifier * 0.35;
+      const opacityToRemove = modifier * 0.6;
       // @ts-ignore
-      wordElement.querySelector("div").style?.transform = `scale(${
-        baseScale + additional
-      })`;
+      const $word = $(wordElement).find(".tbdWord");
+      $word.css("transform", `scale(${base - scaleToRemove})`);
+      $word.css("opacity", `${base - opacityToRemove}`);
     }, 0);
   }
 
