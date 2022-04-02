@@ -531,6 +531,14 @@ class TbdUI {
   private $progressMeterTotal: JQuery<HTMLElement> = $(
     "#tbdmodeInfo .progressMeterTotal"
   );
+  private $totalCompleteCount: JQuery<HTMLElement> = $(
+    ".tbdTotalCompleteCount"
+  );
+  private $totalWordCount: JQuery<HTMLElement> = $(".tbdTotalWordCount");
+  private $groupCompleteCount: JQuery<HTMLElement> = $(
+    ".tbdGroupCompleteCount"
+  );
+  private $groupTotalCount: JQuery<HTMLElement> = $(".tbdGroupTotalCount");
   private $targetThreshold: JQuery<HTMLElement> = $("#tbdModeTargetThreshold");
   private $progressMeterGroup: JQuery<HTMLElement> = $(
     "#tbdmodeInfo .progressMeterGroup"
@@ -807,6 +815,8 @@ class TbdUI {
       "title",
       `${beatenAtTargetCount} words of ${count} total have been typed faster than the target of ${targetSpeed}`
     );
+    this.$totalWordCount.text(count);
+    this.$totalCompleteCount.text(beatenAtTargetCount);
   }
 
   updateGroupProgressMeter(currentGroup: TbdGroup, targetSpeed: number): void {
@@ -820,6 +830,8 @@ class TbdUI {
       "title",
       `${beatenAtTargetCount} words of ${groupWordset.length} in the current group have been typed faster than the target of ${targetSpeed}`
     );
+    this.$groupTotalCount.text(groupWordset.length);
+    this.$groupCompleteCount.text(beatenAtTargetCount);
   }
 
   pageChangeHandler(_previousPage: Page, nextPage: Page): void {

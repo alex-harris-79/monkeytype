@@ -4881,13 +4881,15 @@
         <div id="tbdmodeInfo" style="display: none">
           <div id="tbdModeProgress">
             <div class="tbdmode progressMeterContainer">
-              <div class="tbdmode progressMeterTotal"></div>
-              <div class="tbdmode progressMeterGroup"></div>
+              <span class="count tbdTotalWordCount"></span>
+              <span class="count tbdGroupTotalCount"></span>
+              <div class="tbdmode progressMeterTotal">
+                <span class="count tbdTotalCompleteCount"></span>
+              </div>
+              <div class="tbdmode progressMeterGroup">
+                <span class="count tbdGroupCompleteCount"></span>
+              </div>
             </div>
-            <div
-              class="tbdmode threshold nextThreshold"
-              title="Next threshold"
-            ></div>
           </div>
           <div id="tbdModeControls" class="tbdmode controls">
             <select id="tbdModeConfigSettings">
@@ -4940,10 +4942,6 @@
               >
                 →️
               </span>
-            </div>
-            <div>
-              <span>Group Threshold:</span>
-              <span id="tbdModeGroupThreshold"></span>
             </div>
             <div>
               <span>Target Speed:</span>
