@@ -201,9 +201,6 @@ class TbdMode {
     TbdEvents.addSubscriber("wordsReset", () => {
       this.regenerateGroupsFromWordset(this.monkeyTypeWordset);
     });
-    TbdEvents.addSubscriber("nextGroup", (data) => {
-      this.currentGroup = data["group"];
-    });
     TbdEvents.addSubscriber("groupsRegenerated", () => {
       ResetRequestedEvent.dispatch();
     });
@@ -218,12 +215,9 @@ class TbdMode {
       if (nextIndex == this.groups.getGroups().length) {
         nextIndex = 0;
       }
-
-      TbdEvents.dispatchEvent("nextGroup", {
-        group: this.groups.getGroups()[nextIndex],
-        groupNumber: nextIndex + 1,
-      });
+      this.setCurrentGroup(this.groups.getGroups()[nextIndex]);
     });
+
     TbdEvents.addSubscriber("previousGroupButtonClicked", () => {
       if (this.groups.getGroups().length <= 1) {
         return;
@@ -235,11 +229,7 @@ class TbdMode {
       if (nextIndex == -1) {
         nextIndex = this.groups.getGroups().length - 1;
       }
-
-      TbdEvents.dispatchEvent("nextGroup", {
-        group: this.groups.getGroups()[nextIndex],
-        groupNumber: nextIndex + 1,
-      });
+      this.setCurrentGroup(this.groups.getGroups()[nextIndex]);
     });
 
     TbdEvents.addSubscriber("actionButtonClicked", (data) => {
@@ -257,6 +247,15 @@ class TbdMode {
           this.handleImportDataRequest();
           break;
       }
+    });
+  }
+
+  setCurrentGroup(group: TbdGroup): void {
+    this.currentGroup = group;
+    const index = this.groups.getGroups().indexOf(group);
+    TbdEvents.dispatchEvent("nextGroup", {
+      group: group,
+      groupNumber: index + 1,
     });
   }
 
@@ -356,11 +355,6 @@ class TbdMode {
       this.getCurrentGroup().getUnbeatenWordset().length > 0 &&
       this.getCurrentGroup().getThreshold() <= this.getConfig().getTargetSpeed()
     ) {
-      const index = this.getCurrentGroupIndex();
-      TbdEvents.dispatchEvent("nextGroup", {
-        group: this.getCurrentGroup(),
-        groupNumber: index + 1,
-      });
       return;
     }
     let next: TbdGroup | null = this.getFirstIncompleteGroup();
@@ -368,11 +362,7 @@ class TbdMode {
       this.getConfig().bumpTargetSpeed(); // side effects, regenerates all groups
       next = this.getFirstIncompleteGroup();
     }
-    const index = this.groups.getGroups().indexOf(this.currentGroup);
-    TbdEvents.dispatchEvent("nextGroup", {
-      group: next,
-      groupNumber: index + 1,
-    });
+    this.setCurrentGroup(next);
   }
 
   getCurrentGroupIndex(): number {
@@ -410,10 +400,13 @@ class TbdMode {
       // Bumping the target triggers a regeneration of groups and infinite loops are no fun
       return;
     }
-    this.groups.regenerateGroups(
+    const newGroups = this.groups.regenerateGroups(
       Array.from(uniqueBelowTarget),
       this.config.getGroupSize()
     );
+    if (newGroups.length > 0) {
+      this.setCurrentGroup(this.groups.getGroups()[0]);
+    }
   }
 
   handleResultsShownEvent(results: UpdateData): void {
@@ -995,11 +988,19 @@ class TbdEvents {
     });
   }
 
-  static addSubscriber(name: string, callback: TbdEventSubscriber): void {
-    if (!Array.isArray(TbdEvents.subscribers[name])) {
-      TbdEvents.subscribers[name] = [];
+  static addSubscriber(
+    names: string | Array<string>,
+    callback: TbdEventSubscriber
+  ): void {
+    if (typeof names == "string") {
+      names = [names];
     }
-    TbdEvents.subscribers[name].push(callback);
+    names.forEach((name) => {
+      if (!Array.isArray(TbdEvents.subscribers[name])) {
+        TbdEvents.subscribers[name] = [];
+      }
+      TbdEvents.subscribers[name].push(callback);
+    });
   }
 }
 
@@ -1159,10 +1160,13 @@ class TbdGroups {
     );
   }
 
-  regenerateGroups(words: Array<string>, desiredGroupSize: number): void {
+  regenerateGroups(
+    words: Array<string>,
+    desiredGroupSize: number
+  ): Array<TbdGroup> {
     this.groups = [];
     if (words.length == 0) {
-      return;
+      return [];
     }
 
     const randomlySorted = words.sort(TbdSorting.randomSorter);
@@ -1195,10 +1199,7 @@ class TbdGroups {
       start = start + size;
     });
     TbdEvents.dispatchEvent("groupsRegenerated", { groups: this.groups });
-    TbdEvents.dispatchEvent("nextGroup", {
-      group: this.getGroups()[0],
-      groupNumber: 1,
-    });
+    return this.groups;
   }
 }
 
