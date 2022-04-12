@@ -11,10 +11,10 @@ import {
   SearchService,
   TextExtractor,
 } from "../utils/search-service";
-import { debounce } from "../utils/debounce";
 import { splitByAndKeep } from "../utils/strings";
 import QuotesController from "../controllers/quotes-controller";
 import { Auth } from "../firebase";
+import { debounce } from "throttle-debounce";
 
 export let selectedId = 1;
 
@@ -110,7 +110,7 @@ function buildQuoteSearchResult(
     <div class="source">
       <div class="sub">source</div>
       ${highlightMatches(quote.source, matchedSearchTerms)}</div>
-    <div class="icon-button report ${
+    <div class="text-button report ${
       isNotAuthed && "hidden"
     }" aria-label="Report quote" data-balloon-pos="left">
       <i class="fas fa-flag report"></i>
@@ -258,7 +258,7 @@ export function apply(val: number): boolean {
   return ret;
 }
 
-const searchForQuotes = debounce((): void => {
+const searchForQuotes = debounce(250, (): void => {
   const searchText = (<HTMLInputElement>document.getElementById("searchBox"))
     .value;
   updateResults(searchText);
