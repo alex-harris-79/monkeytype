@@ -4883,12 +4883,8 @@
             <div class="tbdmode progressMeterContainer">
               <div id="tbdModeWordInfo"></div>
               <span class="count tbdTotalWordCount"></span>
-              <span class="count tbdGroupTotalCount"></span>
               <div class="tbdmode progressMeterTotal">
                 <span class="count tbdTotalCompleteCount"></span>
-              </div>
-              <div class="tbdmode progressMeterGroup">
-                <span class="count tbdGroupCompleteCount"></span>
               </div>
             </div>
           </div>
@@ -5161,7 +5157,11 @@
                 <li>JK you're great. Thanks for trying my funbox mode!</li>
               </ul>
             </div>
-            <div class="words"></div>
+            <div class="words">
+              <div class="completedMessage" style="display: none">
+                You win! Increase the target speed to keep training.
+              </div>
+            </div>
           </div>
           <div id="tbdModeStats">
             <div>
@@ -5171,26 +5171,6 @@
                 class="tbdConfigValue"
                 data-key="groupSize"
               ></span>
-            </div>
-            <div>
-              <span
-                id="tbdPreviousGroupButton"
-                class="text-button"
-                title="Skip to previous group"
-              >
-                ←️
-              </span>
-              <span>Group</span>
-              <span id="tbdModeCurrentGroupNumber"></span>
-              <span>of</span>
-              <span id="tbdModeGroupCount"></span>
-              <span
-                id="tbdNextGroupButton"
-                class="text-button"
-                title="Skip to next group"
-              >
-                →️
-              </span>
             </div>
             <div>
               <span>Target Speed:</span>

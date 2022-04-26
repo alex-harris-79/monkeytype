@@ -186,7 +186,7 @@ body.tbdMode {
         border-bottom: 1px dashed var(--sub-color);
       }
 
-      &[data-beaten-at-target="1"] > .tbdWord {
+      &[data-almost-there="1"] > .tbdWord {
         color: var(--main-color);
         font-weight: bold;
       }
